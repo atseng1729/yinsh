@@ -10,7 +10,7 @@ import Collage.Layout exposing (stack)
 import Collage.Render exposing (svg)
 import Color
 
-import Constants exposing (vertices, edges)
+import Constants exposing (boardData, vertices, edges)
 
 main : Program Flags Model Msg
 main =
@@ -49,7 +49,7 @@ renderBoard edges =
 view : Model -> Html Msg
 view model =
   let
-    board = renderBoard edges 
+    board = renderBoard edges
     styles =
       [ ("position", "fixed")
       , ("top", "50%")
