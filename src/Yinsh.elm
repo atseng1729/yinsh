@@ -48,6 +48,7 @@ type alias Model =
   , windowWidth : Float 
   , windowHeight : Float  
   , mousePos : (Float, Float) -- Stored as COLLAGE COORDINATES
+  , mouseHex : (Int, Int)     -- Hex coordinates of mouse, use this!
   }
 
 type alias Flags =
@@ -64,7 +65,8 @@ initModel flags = {boardData = emptyBoard,
             score = (0, 0),
             windowWidth = toFloat flags.windowWidth,
             windowHeight = toFloat flags.windowHeight,
-            mousePos = (0, 0)} -- stored in COLLAGE COORDINATES, automatically converteda
+            mousePos = (0, 0), -- stored in COLLAGE COORDINATES, automatically converteda
+            mouseHex = (0, 0)}
 
 init : Flags -> (Model, Cmd Msg)
 init flags =
@@ -86,7 +88,7 @@ update msg model =
     WindowResize x y -> ({model | windowWidth = toFloat x, windowHeight = toFloat y}, Cmd.none)
     MouseMoved (x,y) -> 
       let (cx, cy) = xyToCollage model (x,y) 
-      in ({model | mousePos = (cx, cy)}, Cmd.none)
+      in ({model | mousePos = (cx, cy), mouseHex = pix2hex model.mousePos}, Cmd.none)
 --------------------------
 -- see https://github.com/elm/browser/blob/1.0.2/examples/src/Drag.elm for example of decoder interaction
 
@@ -113,9 +115,9 @@ drawRing p =
   in (circle ring_size) |> 
       outlined (solid thick (uniform Color.black)) |> shift (cx, cy)
 
--- Checks if given coordinates are valid
-isValid : Model -> IntPoint -> Bool
-isValid model point = Dict.member point model.boardData
+-- Checks if model currently have valid Hex coordinates
+mouseHexValid : Model -> Bool
+mouseHexValid model = Dict.member model.mouseHex model.boardData
 
 
 renderBoard : List (Point, Point) -> Collage Msg 
@@ -139,11 +141,10 @@ view model =
       , ("left", "50%")
       , ("transform", "translate(-50%, -50%)")
       ]
-    hex_pos = pix2hex model.mousePos
   in
-    if isValid model hex_pos then
+    if mouseHexValid model then
     let
-      testRing = drawRing <| hex_pos
+      testRing = drawRing <| model.mouseHex
       drawShit = [testRing, board]
       canvas = svg <| group drawShit
     in 
