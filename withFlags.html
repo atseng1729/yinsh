@@ -1,0 +1,18 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Main</title>
+  <script src="yinsh.js"></script>
+</head>
+
+<body>
+  <div id="yinsh"></div>
+  <script>
+  var app = Elm.Yinsh.init({
+    node: document.getElementById('yinsh'),
+    flags: {windowWidth: window.innerWidth,
+	    windowHeight: window.innerHeight}
+  });
+  </script>
+</body>
+</html>

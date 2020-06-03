@@ -1,5 +1,5 @@
 module Constants exposing (VState, IntPoint, emptyBoard, vertices, edges, edges_coords, hex2pix, pix2hex,
-                            ring_size)
+                            ring_size, side)
 
 import Dict exposing (Dict)
 import Collage exposing (Point)
