@@ -16,6 +16,11 @@ def axial_to_cartesian(v):
 def euclidean_distance(v1, v2):
     return math.sqrt((v1[0] - v2[0])*(v1[0] - v2[0]) + (v1[1] - v2[1])*(v1[1] - v2[1]))
 
+# returns true if the second vertex is a positive cardinal direction jump from the first
+def is_edge(v1, v2):
+    return any([v2[1] == v1[1] and v2[0] == (v1[0] + 1),
+               v2[1] == v1[1] + 1 and v2[0] == v1[0],
+               v2[1] == v1[1] + 1 and v2[0] == v1[0] + 1])
 def get_axial_vertices():
     vertices = ([(-5, i) for i in range(-4, 0)]
              + [(-4, i) for i in range(-5, 2)]
@@ -40,7 +45,15 @@ def get_edges(cart_vertices):
             edges.append((v1, v2))
     return edges
 
+def get_int_edges(axial_vertices):
+    int_edges = []
+    for v1, v2 in itertools.permutations(axial_vertices, 2):
+        if is_edge(v1, v2):
+            int_edges.append((v1, v2))
+    return int_edges
+
 if __name__=="__main__":
     axial_vertices = get_axial_vertices()
     cart_vertices = get_cartesian_vertices(axial_vertices)
     edges = get_edges(cart_vertices)
+    int_edges = get_int_edges(axial_vertices)
