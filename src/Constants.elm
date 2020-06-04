@@ -5,9 +5,9 @@ import Collage exposing (Point)
 import Color
 
 -- Vertex state
--- Using R, G for colors - red green. Can modify in display obviously
 -- Markers and rings are mutually exclusive in the internal board state
-type VState = R_Marker | R_Ring | G_Marker | G_Ring | None
+type Player = P1 | P2
+type VState = Marker Player | Ring Player | None
 
 -- Since coordinates of the internal state are all integers; we only need to
 -- touch floats when we work with drawing

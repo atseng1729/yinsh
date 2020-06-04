@@ -28,9 +28,8 @@ import Helper exposing (..)
 -- RemoveR -> remove a ring upon 5-in-row (or many if 2 5s are formed at once)
 -- Win -> Display win message
 -- True/False to toggle which side is moving
--- True - Red
--- False - Green
-type GState = PlaceR Int | SelectR Bool | Confirm Bool | RemoveR Bool Int | Win Bool
+-- Colors: R, G
+type GState = PlaceR Player | SelectR Player | Confirm Player | RemoveR Player Int | Win Player
 
 main : Program Flags Model Msg
 main =
@@ -48,6 +47,8 @@ type alias Model =
   , windowWidth : Float
   , windowHeight : Float
   , mouseHex : IntPoint     -- Hex coordinates of mouse, use this!
+  , p1Rings : Int          -- Current Number of Red Rings on Board
+  , p2Rings : Int 
   }
 
 type alias Flags =
@@ -61,11 +62,23 @@ type Msg = WindowResize Int Int |
 
 initModel : Flags -> Model
 initModel flags = {boardData = emptyBoard,
-            gameState = PlaceR 0,
+            gameState = PlaceR P1,
             score = (0, 0),
             windowWidth = toFloat flags.windowWidth,
             windowHeight = toFloat flags.windowHeight,
-            mouseHex = (0, 0)}
+            mouseHex = (0, 0), 
+            p1Rings = 0,
+            p2Rings = 0}
+
+-- Given model, color, and change,
+changeRings : Model -> Player -> Int -> Model
+changeRings model p n = 
+  case p of 
+    P1 -> {model | p1Rings = model.p1Rings + n}
+    P2 -> {model | p2Rings = model.p2Rings + n}
+
+addRing model player = changeRings model player 1 
+removeRing model player = changeRings model player -1
 
 init : Flags -> (Model, Cmd Msg)
 init flags =
@@ -86,21 +99,24 @@ update msg model =
   case msg of
     -- WindowResize has carries two ints next to it
     WindowResize x y -> ({model | windowWidth = toFloat x, windowHeight = toFloat y}, Cmd.none)
-    MouseMoved p ->
-      ({model | mouseHex = p}, Cmd.none)
-    MouseClick p ->
-      if isValidHex model.boardData p then
-        case model.gameState of
-          PlaceR n ->
+    MouseMoved pt ->
+      ({model | mouseHex = pt}, Cmd.none)
+    MouseClick pt ->
+      case model.gameState of
+        PlaceR player ->
+          if isEmptyHex model.boardData pt then
             let
-              newVState = if isPlayer1 n then R_Ring else G_Ring
-              newGState = if n < 9 then PlaceR (n+1) else SelectR True
-              newBoardData = Dict.insert p newVState model.boardData
+              other = otherP player
+              -- So that when there are 9 rings on the board, the appropriate state change will be triggered after placing the 10th
+              newGState = if (model.p1Rings + model.p2Rings) < 9 then PlaceR other else SelectR other
+              newBoardData = Dict.insert pt (Ring player) model.boardData
+              newModel = {model | boardData = newBoardData, gameState = newGState}
             in
-              ({model | boardData = newBoardData, gameState = newGState}, Cmd.none)
-          _ -> Debug.todo "Need to determine other cases for mouse click"
-      else
-        (model, Cmd.none)
+              (addRing newModel player, Cmd.none)
+          else
+            (model, Cmd.none)
+
+        _ -> Debug.todo "Need to determine other cases for mouse click"
 
 --------------------------
 -- see https://github.com/elm/browser/blob/1.0.2/examples/src/Drag.elm for example of decoder interaction
@@ -123,21 +139,21 @@ mouseInputToHex model (mx, my) =
   (mx - model.windowWidth/2, model.windowHeight/2 - my) |> pix2hex
 
 -- Renders a single ring at the given hex coordinates
-drawRing : IntPoint -> Bool -> Collage Msg
-drawRing p isP1 =
+drawRing : IntPoint -> Player -> Collage Msg
+drawRing p player =
   let
     (cx, cy) = hex2pix p
-    ringColor = if isP1 then p1Color else p2Color
+    ringColor = if (player == P1) then p1Color else p2Color
   in
     (circle ring_size)
       |> outlined (solid thick (uniform ringColor))
       |> shift (cx, cy)
 
-drawMarker : IntPoint -> Bool -> Collage Msg
-drawMarker p isP1 =
+drawMarker : IntPoint -> Player -> Collage Msg
+drawMarker p player =
   let
     (cx, cy) = hex2pix p
-    markerColor = if isP1 then p1Color else p2Color
+    markerColor = if (player == P1) then p1Color else p2Color
   in
     (circle marker_size)
       |> filled (uniform markerColor)
@@ -156,10 +172,8 @@ renderBoard edges_coords =
 renderPiece : (IntPoint, VState) -> Collage Msg
 renderPiece (p, state) =
   case state of
-    R_Marker -> drawMarker p True
-    G_Marker -> drawMarker p False
-    R_Ring   -> drawRing p True
-    G_Ring   -> drawRing p False
+    Marker player -> drawMarker p player 
+    Ring player -> drawRing p player 
     None     -> Debug.todo "renderPiece - should not reach here"
 
 renderPieces : Dict IntPoint VState -> Collage Msg
@@ -169,13 +183,26 @@ renderPieces boardData =
     |> List.map renderPiece
     |> group
 
+-- Adds a floating ring if appropriate on top of the mouse cursor; should be 
+-- final preprocessing step before drawing collage 
+addFloatingR : Model -> Collage Msg -> Collage Msg
+addFloatingR model canvas =
+  case model.gameState of 
+    PlaceR player ->
+      if (isEmptyHex model.boardData model.mouseHex) then
+         group [drawRing model.mouseHex player, canvas]
+      else canvas 
+
+  -- For now, don't do hover-Ring at other stages
+    _ -> canvas 
+
 view : Model -> Html Msg
 view model =
   let
     -- Add invisible border to prevent annoying edge glitch
     board = renderBoard edges_coords
     pieces = renderPieces model.boardData
-    game = group [pieces, board] -- order important since we want pieces on top of board
+    game = addFloatingR model <| group [pieces, board] -- order important since we want pieces on top of board
     -- TODO mouse over feature but i think i want to refactor gstate and make this a separate state
     -- if (isValidHex model.mouseHex) then
     --   mouseOverRing = drawRing model.mouseHex _____

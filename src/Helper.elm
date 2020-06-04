@@ -5,13 +5,15 @@ import Collage exposing (Point)
 
 import Constants exposing (..)
 
-isPlayer1 : Int -> Bool
-isPlayer1 x =
-  (modBy 2 x) == 0
-
-isValidHex : Dict IntPoint VState -> IntPoint -> Bool
-isValidHex boardData p =
+-- TODO: change name to isEmptyHex
+isEmptyHex : Dict IntPoint VState -> IntPoint -> Bool
+isEmptyHex boardData p =
   let
     curVState = Dict.get p boardData
   in
-    (curVState /= Nothing) && (curVState /= Just R_Ring) && (curVState /= Just G_Ring)
+    (curVState /= Nothing) && (curVState == Just None)
+
+otherP : Player -> Player
+otherP p = case p of 
+  P1 -> P2
+  P2 -> P1
