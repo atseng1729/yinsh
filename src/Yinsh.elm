@@ -48,6 +48,7 @@ type alias Model =
   , selectMouseHex : IntPoint -- Hex coordinates of mouse in last state, used for confirm + other stuff maybe in future
   , p1Rings : Int          -- Current Number of Red Rings on Board
   , p2Rings : Int
+  , validMoves : List IntPoint -- List of valid coordinates that can be moved to; only used currently for drawing possible moves
   }
 
 type alias Flags =
@@ -57,7 +58,8 @@ type alias Flags =
 
 type Msg = WindowResize Int Int |
            MouseMoved IntPoint |
-           MouseClick IntPoint
+           MouseClick IntPoint |
+           UpdateValidPts -- trigger message to recalculate valid points and update model accordingly
 
 initModel : Flags -> Model
 initModel flags = {boardData = emptyBoard,
@@ -68,7 +70,8 @@ initModel flags = {boardData = emptyBoard,
             mouseHex = (0, 0),
             selectMouseHex = (0, 0),
             p1Rings = 0,
-            p2Rings = 0}
+            p2Rings = 0, 
+            validMoves = []}
 
 -- Given model, color, and change,
 changeRings : Model -> Player -> Int -> Model
@@ -76,7 +79,6 @@ changeRings model p n =
   case p of
     P1 -> {model | p1Rings = model.p1Rings + n}
     P2 -> {model | p2Rings = model.p2Rings + n}
-    Both -> Debug.todo "changeRings - Should not reach here"
 
 addRing model player = changeRings model player 1
 removeRing model player = changeRings model player -1
@@ -98,7 +100,12 @@ subscriptions model =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    -- WindowResize has carries two ints next to it
+    -- WindowResize has carries two ints next to it. NOTE: VALIDPOINTS IS NOT WELL KEPT TRACK OF RN
+    UpdateValidPts ->
+      let candidates = collinearPoints 9 model.selectMouseHex 
+          valids = List.filter (\pt -> isValidMove model.boardData pt model.selectMouseHex) candidates
+      in ({model | validMoves = valids}, Cmd.none)
+
     WindowResize x y -> ({model | windowWidth = toFloat x, windowHeight = toFloat y}, Cmd.none)
 
     MouseMoved pt ->
@@ -119,9 +126,8 @@ update msg model =
           else
             (model, Cmd.none)
         SelectR player ->
-          if isPlayerRing model.boardData pt player then
-            ({model | gameState = Confirm player, selectMouseHex = model.mouseHex},
-              Cmd.none)
+          if isPlayerRing model.boardData pt player then -- Process the new valid moves for display in confirm
+            update UpdateValidPts {model | gameState = Confirm player, selectMouseHex = model.mouseHex}
           else
             (model, Cmd.none)
         Confirm player ->
@@ -183,6 +189,12 @@ drawMarker p player =
       |> filled (uniform markerColor)
       |> shift (cx, cy)
 
+-- drawDot; just draw a smaller black dot
+drawDot : IntPoint -> Collage Msg 
+drawDot p = 
+  (circle (marker_size * 0.6)) |> filled (uniform dotColor) |> shift (hex2pix p)
+
+
 renderBoard : List (Point, Point) -> Collage Msg
 renderBoard edges_coords =
   let edges = List.map (\(p1, p2) -> segment p1 p2
@@ -199,6 +211,11 @@ renderPiece (p, state) =
     Marker player -> drawMarker p player
     Ring player -> drawRing p player
     None     -> Debug.todo "renderPiece - should not reach here"
+
+-- Used to add extra dots for valid move markers
+renderDots : List (IntPoint) -> Collage Msg
+renderDots ps = 
+  group <| List.map (\p -> drawDot p) ps
 
 renderPieces : Dict IntPoint VState -> Collage Msg
 renderPieces boardData =
@@ -224,9 +241,10 @@ addFloatingElems model canvas =
         canvas
     Confirm player ->
       let
-        canvasWithMarker = group [drawMarker model.selectMouseHex player, canvas]
+        dots = renderDots model.validMoves
+        canvasWithMarker = group [dots, drawMarker model.selectMouseHex player, canvas]
       in
-        if (isEmptyHex model.boardData model.mouseHex) then
+        if (isValidMove model.boardData model.mouseHex model.selectMouseHex) then
           group [drawRing model.mouseHex player, canvasWithMarker]
         else canvasWithMarker
   -- For now, other stages unimplemented

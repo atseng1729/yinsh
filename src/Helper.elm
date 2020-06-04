@@ -12,22 +12,40 @@ isEmptyHex boardData p =
   in
     (curVState == Just None)
 
--- Is there a ring?
+-- Sees if there is a ring at the value; return it if so
+maybeRing : Dict IntPoint VState -> IntPoint -> Maybe VState
+maybeRing boardData p = 
+  case (Dict.get p boardData) of
+    Just (Ring player) -> Just (Ring player)
+    _ -> Nothing
+
+-- Sees if there is a marker at the value; return it if so
+maybeMarker : Dict IntPoint VState -> IntPoint -> Maybe VState
+maybeMarker boardData p = 
+  case (Dict.get p boardData) of
+    Just (Marker player) -> Just (Marker player)
+    _ -> Nothing
+
+-- Is there a ring at the point?
+isRing : Dict IntPoint VState -> IntPoint -> Bool
+isRing boardData p  =
+  case maybeRing boardData p of 
+    Just _ -> True
+    Nothing -> False 
+
+-- Is there a ring of this player at the point??
 isPlayerRing : Dict IntPoint VState -> IntPoint -> Player -> Bool
 isPlayerRing boardData p player =
-  let
-    curVState = Dict.get p boardData
-  in
-    if player == Both then (curVState == Just (Ring P1)) || (curVState == Just (Ring P2))
-    else curVState == Just (Ring player)
+  case maybeRing boardData p of 
+    Just (Ring mplayer) -> player == mplayer
+    _ -> False 
 
-isPlayerMarker : Dict IntPoint VState -> IntPoint -> Player -> Bool
-isPlayerMarker boardData p player =
-  let
-    curVState = Dict.get p boardData
-  in
-    if player == Both then (curVState == Just (Marker P1)) || (curVState == Just (Marker P2))
-    else curVState == Just (Marker player)
+-- Is there a marker at this point?
+isMarker : Dict IntPoint VState -> IntPoint -> Bool
+isMarker boardData p  =
+  case maybeMarker boardData p of 
+    Just _ -> True
+    Nothing -> False 
 
 getSign : Int -> Int
 getSign x =
@@ -73,9 +91,9 @@ checkPointsBetween : Dict IntPoint VState -> IntPoint -> IntPoint -> Bool -> Boo
 checkPointsBetween boardData curP prevRingP visitedEmptySpace =
   if curP == prevRingP then
     True
-  else if isPlayerRing boardData curP Both then
+  else if isRing boardData curP then
     False
-  else if visitedEmptySpace && (isPlayerMarker boardData curP Both) then
+  else if visitedEmptySpace && (isMarker boardData curP) then
     False
   else
     let
@@ -88,11 +106,22 @@ isCollinear : IntPoint -> IntPoint -> Bool
 isCollinear (x1, y1) (x2, y2) =
   (x1-x2 == y1-y2) || (x1 == x2) || (y1 == y2)
 
+-- Generate collinear points that are up to n away from the source! (Includes source point)
+collinearPoints : Int -> IntPoint -> List IntPoint
+collinearPoints n (x,y) =
+  let range = List.range -n n 
+      xpoints = List.map (\i -> (x + i, y)) range
+      ypoints = List.map (\i -> (x, y+i)) range
+      diagpoints = List.map (\i -> (x+i, y+i)) range 
+  in xpoints ++ ypoints ++ diagpoints
+
 -- For move to be valid:
 --   ring has to be placed in vacant space
 --   ring must be collinear with original ring position
 --   ring cannot jump over another ring
 --   ring has to be placed immediately after a contiguous line of markers
+
+-- Returns whether move (prevRingP -> p) is valid 
 isValidMove : Dict IntPoint VState -> IntPoint -> IntPoint -> Bool
 isValidMove boardData p prevRingP =
   let
@@ -107,4 +136,3 @@ otherP : Player -> Player
 otherP p = case p of
   P1   -> P2
   P2   -> P1
-  Both -> Both

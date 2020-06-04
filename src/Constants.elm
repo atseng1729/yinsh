@@ -6,7 +6,7 @@ import Color
 
 -- Vertex state
 -- Markers and rings are mutually exclusive in the internal board state
-type Player = P1 | P2 | Both
+type Player = P1 | P2
 type VState = Marker Player | Ring Player | None
 
 -- Since coordinates of the internal state are all integers; we only need to
@@ -19,6 +19,9 @@ p1Color = Color.red
 p2Color = Color.green
 boardColor = Color.grey
 borderColor = Color.black
+
+-- For valid move dots
+dotColor = Color.black
 
 -- Size of a ring radius in pixels
 ring_size = 0.36 * side
