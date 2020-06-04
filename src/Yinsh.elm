@@ -12,17 +12,17 @@ import Debug
 import Time
 
 import Dict exposing (Dict)
--- segment, traced, solid, thin, uniform, Point, 
+-- segment, traced, solid, thin, uniform, Point,
 import Collage exposing (..)
 import Collage.Layout exposing (stack)
 import Collage.Render exposing (svg)
 import Color
 
-import Constants exposing (VState(..), IntPoint, emptyBoard, vertices, edges, edges_coords, hex2pix, pix2hex,
-                            ring_size, side)
+import Constants exposing (..)
+import Helper exposing (..)
 
 -- Game state; add more to this as we think of more reasonable states
--- PlaceR -> Placing the rings initially 
+-- PlaceR -> Placing the rings initially
 -- SelectR -> selecting ring to move
 -- Confirm -> choosing the move out of the possible ones
 -- RemoveR -> remove a ring upon 5-in-row (or many if 2 5s are formed at once)
@@ -30,7 +30,7 @@ import Constants exposing (VState(..), IntPoint, emptyBoard, vertices, edges, ed
 -- True/False to toggle which side is moving
 -- True - Red
 -- False - Green
-type GState = PlaceR Bool | SelectR Bool | Confirm Bool | RemoveR Bool Int | Win Bool 
+type GState = PlaceR Int | SelectR Bool | Confirm Bool | RemoveR Bool Int | Win Bool
 
 main : Program Flags Model Msg
 main =
@@ -43,12 +43,11 @@ main =
 
 type alias Model =
   { boardData : Dict IntPoint VState
-  , gameState : GState 
+  , gameState : GState
   , score : (Int, Int)
-  , windowWidth : Float 
-  , windowHeight : Float  
-  , mousePos : (Float, Float) -- Stored as COLLAGE COORDINATES
-  , mouseHex : (Int, Int)     -- Hex coordinates of mouse, use this!
+  , windowWidth : Float
+  , windowHeight : Float
+  , mouseHex : IntPoint     -- Hex coordinates of mouse, use this!
   }
 
 type alias Flags =
@@ -56,16 +55,16 @@ type alias Flags =
   , windowHeight : Int
   }
 
-type Msg = WindowResize Int Int | 
-           MouseMoved Point
+type Msg = WindowResize Int Int |
+           MouseMoved IntPoint |
+           MouseClick IntPoint
 
 initModel : Flags -> Model
-initModel flags = {boardData = emptyBoard, 
-            gameState = PlaceR True, 
+initModel flags = {boardData = emptyBoard,
+            gameState = PlaceR 0,
             score = (0, 0),
             windowWidth = toFloat flags.windowWidth,
             windowHeight = toFloat flags.windowHeight,
-            mousePos = (0, 0), -- stored in COLLAGE COORDINATES, automatically converteda
             mouseHex = (0, 0)}
 
 init : Flags -> (Model, Cmd Msg)
@@ -76,65 +75,111 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
   -- Add code to differentiate behavior in different states! TODO
   Sub.batch [
-    E.onResize WindowResize, 
+    E.onResize WindowResize,
     -- map : (a -> value) -> Decoder a -> Decoder value. remove later but helpful now
-    E.onMouseMove decodeMouse
+    E.onMouseMove (decodeMouse model False),
+    E.onMouseDown (decodeMouse model True)
   ]
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
-  case msg of 
-    -- WindowResize has carries two ints next to it 
+  case msg of
+    -- WindowResize has carries two ints next to it
     WindowResize x y -> ({model | windowWidth = toFloat x, windowHeight = toFloat y}, Cmd.none)
-    MouseMoved (x,y) -> 
-      let (cx, cy) = xyToCollage model (x,y) 
-      in ({model | mousePos = (cx, cy), mouseHex = pix2hex model.mousePos}, Cmd.none)
+    MouseMoved p ->
+      ({model | mouseHex = p}, Cmd.none)
+    MouseClick p ->
+      if isValidHex model.boardData p then
+        case model.gameState of
+          PlaceR n ->
+            let
+              newVState = if isPlayer1 n then R_Ring else G_Ring
+              newGState = if n < 9 then PlaceR (n+1) else SelectR True
+              newBoardData = Dict.insert p newVState model.boardData
+            in
+              ({model | boardData = newBoardData, gameState = newGState}, Cmd.none)
+          _ -> Debug.todo "Need to determine other cases for mouse click"
+      else
+        (model, Cmd.none)
+
 --------------------------
 -- see https://github.com/elm/browser/blob/1.0.2/examples/src/Drag.elm for example of decoder interaction
 
 -- Decoder for json -> Msg that contains x, y coords of mouse from JSON
-decodeMouse : D.Decoder Msg
-decodeMouse = 
-  let decode_coords = D.map2 (\x y -> (x,y)) 
-                      (D.field "clientX" D.float) (D.field "clientY" D.float)
-  in 
-    (D.map MouseMoved decode_coords)
+decodeMouse : Model -> Bool -> D.Decoder Msg
+decodeMouse model isClick =
+  let
+    decode_coords = D.map2 (\x y -> (x,y)) (D.field "clientX" D.float) (D.field "clientY" D.float)
+    p = D.map (mouseInputToHex model) decode_coords
+    msg_type = if isClick then MouseClick else MouseMoved
+  in
+    (D.map msg_type p)
 
-
--------------------------
-
--- Converts x,y from javascript to collage form 
+--------------------------
+-- Converts x,y from javascript to IntPoint
 -- Center at middle of canvas and then invert y-axis
-xyToCollage : Model -> Point -> Point
-xyToCollage model (mx, my) = (mx - model.windowWidth/2, model.windowHeight/2 - my)
+mouseInputToHex : Model -> Point -> IntPoint
+mouseInputToHex model (mx, my) =
+  (mx - model.windowWidth/2, model.windowHeight/2 - my) |> pix2hex
 
--- Renders a single ring at the given hex coordinates 
-drawRing : IntPoint -> Collage Msg
-drawRing p = 
-  let (cx, cy) = hex2pix p
-  in (circle ring_size) |> 
-      outlined (solid thick (uniform Color.black)) |> shift (cx, cy)
+-- Renders a single ring at the given hex coordinates
+drawRing : IntPoint -> Bool -> Collage Msg
+drawRing p isP1 =
+  let
+    (cx, cy) = hex2pix p
+    ringColor = if isP1 then p1Color else p2Color
+  in
+    (circle ring_size)
+      |> outlined (solid thick (uniform ringColor))
+      |> shift (cx, cy)
 
--- Checks if model currently have valid Hex coordinates
-mouseHexValid : Model -> Bool
-mouseHexValid model = Dict.member model.mouseHex model.boardData
+drawMarker : IntPoint -> Bool -> Collage Msg
+drawMarker p isP1 =
+  let
+    (cx, cy) = hex2pix p
+    markerColor = if isP1 then p1Color else p2Color
+  in
+    (circle marker_size)
+      |> filled (uniform markerColor)
+      |> shift (cx, cy)
 
-
-renderBoard : List (Point, Point) -> Collage Msg 
+renderBoard : List (Point, Point) -> Collage Msg
 renderBoard edges_coords =
-  let edges = List.map (\(p1, p2) -> segment p1 p2 
-              |> traced (solid thin (uniform Color.grey))) edges_coords 
-              |> stack
+  let edges = List.map (\(p1, p2) -> segment p1 p2
+              |> traced (solid thin (uniform boardColor))) edges_coords
+              |> group
       -- Need a border b/c of the glitch near the edges. Also looks better
-      border = square (10 * side) |> outlined (solid thin (uniform Color.black))
+      border = square (10 * side) |> outlined (solid thin (uniform borderColor))
   in
   group [border, edges]
+
+renderPiece : (IntPoint, VState) -> Collage Msg
+renderPiece (p, state) =
+  case state of
+    R_Marker -> drawMarker p True
+    G_Marker -> drawMarker p False
+    R_Ring   -> drawRing p True
+    G_Ring   -> drawRing p False
+    None     -> Debug.todo "renderPiece - should not reach here"
+
+renderPieces : Dict IntPoint VState -> Collage Msg
+renderPieces boardData =
+  (Dict.toList boardData)
+    |> List.filter (\(p, state) -> state /= None)
+    |> List.map renderPiece
+    |> group
 
 view : Model -> Html Msg
 view model =
   let
     -- Add invisible border to prevent annoying edge glitch
     board = renderBoard edges_coords
+    pieces = renderPieces model.boardData
+    game = group [pieces, board] -- order important since we want pieces on top of board
+    -- TODO mouse over feature but i think i want to refactor gstate and make this a separate state
+    -- if (isValidHex model.mouseHex) then
+    --   mouseOverRing = drawRing model.mouseHex _____
+    --   game = group [game, mouseOverRing]
     styles =
       [ ("position", "fixed")
       , ("top", "50%")
@@ -142,12 +187,4 @@ view model =
       , ("transform", "translate(-50%, -50%)")
       ]
   in
-    if mouseHexValid model then
-    let
-      testRing = drawRing <| model.mouseHex
-      drawShit = [testRing, board]
-      canvas = svg <| group drawShit
-    in 
-      div (List.map (\(k, v) -> Attr.style k v) styles) [canvas]
-    else 
-      div (List.map (\(k, v) -> Attr.style k v) styles) [svg <| board]
+    div (List.map (\(k, v) -> Attr.style k v) styles) [svg game]

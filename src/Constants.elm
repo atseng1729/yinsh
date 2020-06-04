@@ -1,23 +1,28 @@
-module Constants exposing (VState, IntPoint, emptyBoard, vertices, edges, edges_coords, hex2pix, pix2hex,
-                            ring_size, side)
+module Constants exposing (..)
 
 import Dict exposing (Dict)
 import Collage exposing (Point)
+import Color
 
 -- Vertex state
 -- Using R, G for colors - red green. Can modify in display obviously
 -- Markers and rings are mutually exclusive in the internal board state
 type VState = R_Marker | R_Ring | G_Marker | G_Ring | None
 
--- Since coordinates of the internal state are all integers; we only need to 
--- touch floats when we work with drawing 
+-- Since coordinates of the internal state are all integers; we only need to
+-- touch floats when we work with drawing
 type alias IntPoint = (Int, Int)
 
 -- Length of a side in pixels
 side = 50
+p1Color = Color.red
+p2Color = Color.green
+boardColor = Color.grey
+borderColor = Color.black
 
 -- Size of a ring radius in pixels
-ring_size = 0.4 * side 
+ring_size = 0.4 * side
+marker_size = ring_size - 2
 
 -- -30 degrees and +90 degrees for x and y axial unit vectors
 radian_x = -1 * pi / 6
@@ -30,8 +35,8 @@ unit_y : Point
 unit_y = (side * cos radian_y, side * sin radian_y)
 
 -- Turns internal representation into cartesian coordinates, scaled appropriately
-hex2pix : IntPoint -> Point 
-hex2pix (x,y) = 
+hex2pix : IntPoint -> Point
+hex2pix (x,y) =
   let cart_x = (Tuple.first unit_x) * toFloat x + (Tuple.first unit_y) * toFloat y
       cart_y = (Tuple.second unit_x) * toFloat x + (Tuple.second unit_y) * toFloat y
   in
@@ -39,11 +44,11 @@ hex2pix (x,y) =
 
 -- Turns a cartesian pixel into the nearest hex coordinate
 -- HARDCODED: assume y axis is vertical, so we don't have to solve system of eqs
-pix2hex : Point -> IntPoint 
-pix2hex (cx, cy) = 
+pix2hex : Point -> IntPoint
+pix2hex (cx, cy) =
   let x = cx / Tuple.first unit_x
       y = (cy - x * Tuple.second unit_x) / (Tuple.second unit_y)
-  in 
+  in
   (round x, round y)
 
 vertices : List IntPoint
