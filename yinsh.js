@@ -5146,6 +5146,7 @@ var $elm$core$Task$perform = F2(
 	});
 var $elm$browser$Browser$element = _Browser_element;
 var $elm$json$Json$Decode$field = _Json_decodeField;
+var $author$project$Constants$P1 = {$: 'P1'};
 var $author$project$Yinsh$PlaceR = function (a) {
 	return {$: 'PlaceR', a: a};
 };
@@ -5374,9 +5375,12 @@ var $author$project$Constants$emptyBoard = $elm$core$Dict$fromList(
 var $author$project$Yinsh$initModel = function (flags) {
 	return {
 		boardData: $author$project$Constants$emptyBoard,
-		gameState: $author$project$Yinsh$PlaceR(0),
+		gameState: $author$project$Yinsh$PlaceR($author$project$Constants$P1),
 		mouseHex: _Utils_Tuple2(0, 0),
+		p1Rings: 0,
+		p2Rings: 0,
 		score: _Utils_Tuple2(0, 0),
+		selectMouseHex: _Utils_Tuple2(0, 0),
 		windowHeight: flags.windowHeight,
 		windowWidth: flags.windowWidth
 	};
@@ -5756,15 +5760,43 @@ var $author$project$Yinsh$subscriptions = function (model) {
 				A2($author$project$Yinsh$decodeMouse, model, true))
 			]));
 };
-var $author$project$Constants$G_Ring = {$: 'G_Ring'};
-var $author$project$Constants$R_Ring = {$: 'R_Ring'};
+var $author$project$Yinsh$Confirm = function (a) {
+	return {$: 'Confirm', a: a};
+};
+var $author$project$Constants$Marker = function (a) {
+	return {$: 'Marker', a: a};
+};
+var $author$project$Constants$Ring = function (a) {
+	return {$: 'Ring', a: a};
+};
 var $author$project$Yinsh$SelectR = function (a) {
 	return {$: 'SelectR', a: a};
 };
-var $elm$core$Basics$modBy = _Basics_modBy;
-var $author$project$Helper$isPlayer1 = function (x) {
-	return !A2($elm$core$Basics$modBy, 2, x);
-};
+var $elm$core$Debug$todo = _Debug_todo;
+var $author$project$Yinsh$changeRings = F3(
+	function (model, p, n) {
+		switch (p.$) {
+			case 'P1':
+				return _Utils_update(
+					model,
+					{p1Rings: model.p1Rings + n});
+			case 'P2':
+				return _Utils_update(
+					model,
+					{p2Rings: model.p2Rings + n});
+			default:
+				return _Debug_todo(
+					'Yinsh',
+					{
+						start: {line: 79, column: 13},
+						end: {line: 79, column: 23}
+					})('changeRings - Should not reach here');
+		}
+	});
+var $author$project$Yinsh$addRing = F2(
+	function (model, player) {
+		return A3($author$project$Yinsh$changeRings, model, player, 1);
+	});
 var $elm$core$Dict$get = F2(
 	function (targetKey, dict) {
 		get:
@@ -5796,17 +5828,175 @@ var $elm$core$Dict$get = F2(
 			}
 		}
 	});
-var $elm$core$Basics$neq = _Utils_notEqual;
-var $author$project$Helper$isValidHex = F2(
+var $author$project$Helper$isCollinear = F2(
+	function (_v0, _v1) {
+		var x1 = _v0.a;
+		var y1 = _v0.b;
+		var x2 = _v1.a;
+		var y2 = _v1.b;
+		return _Utils_eq(x1 - x2, y1 - y2) || (_Utils_eq(x1, x2) || _Utils_eq(y1, y2));
+	});
+var $author$project$Helper$getSign = function (x) {
+	return (x > 0) ? 1 : ((!x) ? 0 : (-1));
+};
+var $author$project$Helper$moveOneStep = F2(
+	function (_v0, _v1) {
+		var x1 = _v0.a;
+		var y1 = _v0.b;
+		var x2 = _v1.a;
+		var y2 = _v1.b;
+		var yChange = $author$project$Helper$getSign(y2 - y1);
+		var xChange = $author$project$Helper$getSign(x2 - x1);
+		return _Utils_Tuple2(x1 + xChange, y1 + yChange);
+	});
+var $elm$core$Basics$not = _Basics_not;
+var $author$project$Constants$Both = {$: 'Both'};
+var $author$project$Constants$P2 = {$: 'P2'};
+var $author$project$Helper$otherP = function (p) {
+	switch (p.$) {
+		case 'P1':
+			return $author$project$Constants$P2;
+		case 'P2':
+			return $author$project$Constants$P1;
+		default:
+			return $author$project$Constants$Both;
+	}
+};
+var $author$project$Helper$flipPointsBetween = F3(
+	function (curP, newRingP, boardData) {
+		flipPointsBetween:
+		while (true) {
+			if (!A2($author$project$Helper$isCollinear, curP, newRingP)) {
+				return _Debug_todo(
+					'Helper',
+					{
+						start: {line: 49, column: 5},
+						end: {line: 49, column: 15}
+					})('flipPointsBetween - Should not reach here');
+			} else {
+				if (_Utils_eq(curP, newRingP)) {
+					return boardData;
+				} else {
+					var _v0 = A2($elm$core$Dict$get, curP, boardData);
+					_v0$2:
+					while (true) {
+						if (_v0.$ === 'Just') {
+							switch (_v0.a.$) {
+								case 'Marker':
+									var player = _v0.a.a;
+									var otherPlayer = $author$project$Helper$otherP(player);
+									var newP = A2($author$project$Helper$moveOneStep, curP, newRingP);
+									var newBoardData = A3(
+										$elm$core$Dict$insert,
+										curP,
+										$author$project$Constants$Marker(otherPlayer),
+										boardData);
+									var $temp$curP = newP,
+										$temp$newRingP = newRingP,
+										$temp$boardData = newBoardData;
+									curP = $temp$curP;
+									newRingP = $temp$newRingP;
+									boardData = $temp$boardData;
+									continue flipPointsBetween;
+								case 'None':
+									var _v1 = _v0.a;
+									var newP = A2($author$project$Helper$moveOneStep, curP, newRingP);
+									var $temp$curP = newP,
+										$temp$newRingP = newRingP,
+										$temp$boardData = boardData;
+									curP = $temp$curP;
+									newRingP = $temp$newRingP;
+									boardData = $temp$boardData;
+									continue flipPointsBetween;
+								default:
+									break _v0$2;
+							}
+						} else {
+							break _v0$2;
+						}
+					}
+					return _Debug_todo(
+						'Helper',
+						{
+							start: {line: 67, column: 9},
+							end: {line: 67, column: 19}
+						})('flipPointsBetween - Should not reach here');
+				}
+			}
+		}
+	});
+var $author$project$Helper$isEmptyHex = F2(
 	function (boardData, p) {
 		var curVState = A2($elm$core$Dict$get, p, boardData);
-		return (!_Utils_eq(curVState, $elm$core$Maybe$Nothing)) && ((!_Utils_eq(
+		return _Utils_eq(
 			curVState,
-			$elm$core$Maybe$Just($author$project$Constants$R_Ring))) && (!_Utils_eq(
-			curVState,
-			$elm$core$Maybe$Just($author$project$Constants$G_Ring))));
+			$elm$core$Maybe$Just($author$project$Constants$None));
 	});
-var $elm$core$Debug$todo = _Debug_todo;
+var $author$project$Helper$isPlayerRing = F3(
+	function (boardData, p, player) {
+		var curVState = A2($elm$core$Dict$get, p, boardData);
+		return _Utils_eq(player, $author$project$Constants$Both) ? (_Utils_eq(
+			curVState,
+			$elm$core$Maybe$Just(
+				$author$project$Constants$Ring($author$project$Constants$P1))) || _Utils_eq(
+			curVState,
+			$elm$core$Maybe$Just(
+				$author$project$Constants$Ring($author$project$Constants$P2)))) : _Utils_eq(
+			curVState,
+			$elm$core$Maybe$Just(
+				$author$project$Constants$Ring(player)));
+	});
+var $author$project$Helper$isPlayerMarker = F3(
+	function (boardData, p, player) {
+		var curVState = A2($elm$core$Dict$get, p, boardData);
+		return _Utils_eq(player, $author$project$Constants$Both) ? (_Utils_eq(
+			curVState,
+			$elm$core$Maybe$Just(
+				$author$project$Constants$Marker($author$project$Constants$P1))) || _Utils_eq(
+			curVState,
+			$elm$core$Maybe$Just(
+				$author$project$Constants$Marker($author$project$Constants$P2)))) : _Utils_eq(
+			curVState,
+			$elm$core$Maybe$Just(
+				$author$project$Constants$Marker(player)));
+	});
+var $author$project$Helper$checkPointsBetween = F4(
+	function (boardData, curP, prevRingP, visitedEmptySpace) {
+		checkPointsBetween:
+		while (true) {
+			if (_Utils_eq(curP, prevRingP)) {
+				return true;
+			} else {
+				if (A3($author$project$Helper$isPlayerRing, boardData, curP, $author$project$Constants$Both)) {
+					return false;
+				} else {
+					if (visitedEmptySpace && A3($author$project$Helper$isPlayerMarker, boardData, curP, $author$project$Constants$Both)) {
+						return false;
+					} else {
+						var updatedVisitEmpty = visitedEmptySpace || A2($author$project$Helper$isEmptyHex, boardData, curP);
+						var newP = A2($author$project$Helper$moveOneStep, curP, prevRingP);
+						var $temp$boardData = boardData,
+							$temp$curP = newP,
+							$temp$prevRingP = prevRingP,
+							$temp$visitedEmptySpace = updatedVisitEmpty;
+						boardData = $temp$boardData;
+						curP = $temp$curP;
+						prevRingP = $temp$prevRingP;
+						visitedEmptySpace = $temp$visitedEmptySpace;
+						continue checkPointsBetween;
+					}
+				}
+			}
+		}
+	});
+var $author$project$Helper$isValidMove = F3(
+	function (boardData, p, prevRingP) {
+		var newP = A2($author$project$Helper$moveOneStep, p, prevRingP);
+		var curVState = A2($elm$core$Dict$get, p, boardData);
+		return _Utils_eq(
+			curVState,
+			$elm$core$Maybe$Just($author$project$Constants$None)) && (A2($author$project$Helper$isCollinear, p, prevRingP) && A4($author$project$Helper$checkPointsBetween, boardData, newP, prevRingP, false));
+	});
 var $author$project$Yinsh$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -5819,37 +6009,260 @@ var $author$project$Yinsh$update = F2(
 						{windowHeight: y, windowWidth: x}),
 					$elm$core$Platform$Cmd$none);
 			case 'MouseMoved':
-				var p = msg.a;
+				var pt = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{mouseHex: p}),
+						{mouseHex: pt}),
 					$elm$core$Platform$Cmd$none);
 			default:
-				var p = msg.a;
-				if (A2($author$project$Helper$isValidHex, model.boardData, p)) {
-					var _v1 = model.gameState;
-					if (_v1.$ === 'PlaceR') {
-						var n = _v1.a;
-						var newVState = $author$project$Helper$isPlayer1(n) ? $author$project$Constants$R_Ring : $author$project$Constants$G_Ring;
-						var newGState = (n < 9) ? $author$project$Yinsh$PlaceR(n + 1) : $author$project$Yinsh$SelectR(true);
-						var newBoardData = A3($elm$core$Dict$insert, p, newVState, model.boardData);
-						return _Utils_Tuple2(
+				var pt = msg.a;
+				var _v1 = model.gameState;
+				switch (_v1.$) {
+					case 'PlaceR':
+						var player = _v1.a;
+						if (A2($author$project$Helper$isEmptyHex, model.boardData, pt)) {
+							var other = $author$project$Helper$otherP(player);
+							var newGState = ((model.p1Rings + model.p2Rings) < 9) ? $author$project$Yinsh$PlaceR(other) : $author$project$Yinsh$SelectR(other);
+							var newBoardData = A3(
+								$elm$core$Dict$insert,
+								pt,
+								$author$project$Constants$Ring(player),
+								model.boardData);
+							var newModel = _Utils_update(
+								model,
+								{boardData: newBoardData, gameState: newGState});
+							return _Utils_Tuple2(
+								A2($author$project$Yinsh$addRing, newModel, player),
+								$elm$core$Platform$Cmd$none);
+						} else {
+							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						}
+					case 'SelectR':
+						var player = _v1.a;
+						return A3($author$project$Helper$isPlayerRing, model.boardData, pt, player) ? _Utils_Tuple2(
 							_Utils_update(
 								model,
-								{boardData: newBoardData, gameState: newGState}),
-							$elm$core$Platform$Cmd$none);
-					} else {
+								{
+									gameState: $author$project$Yinsh$Confirm(player),
+									selectMouseHex: model.mouseHex
+								}),
+							$elm$core$Platform$Cmd$none) : _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					case 'Confirm':
+						var player = _v1.a;
+						if (A3($author$project$Helper$isValidMove, model.boardData, pt, model.selectMouseHex)) {
+							var otherPlayer = $author$project$Helper$otherP(player);
+							var newGState = $author$project$Yinsh$SelectR(otherPlayer);
+							var curP = A2($author$project$Helper$moveOneStep, model.selectMouseHex, pt);
+							var newBoardData = A3(
+								$author$project$Helper$flipPointsBetween,
+								curP,
+								pt,
+								A3(
+									$elm$core$Dict$insert,
+									model.selectMouseHex,
+									$author$project$Constants$Marker(player),
+									A3(
+										$elm$core$Dict$insert,
+										pt,
+										$author$project$Constants$Ring(player),
+										model.boardData)));
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{boardData: newBoardData, gameState: newGState}),
+								$elm$core$Platform$Cmd$none);
+						} else {
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										gameState: $author$project$Yinsh$SelectR(player),
+										selectMouseHex: model.mouseHex
+									}),
+								$elm$core$Platform$Cmd$none);
+						}
+					default:
 						return _Debug_todo(
 							'Yinsh',
 							{
-								start: {line: 101, column: 16},
-								end: {line: 101, column: 26}
+								start: {line: 143, column: 14},
+								end: {line: 143, column: 24}
 							})('Need to determine other cases for mouse click');
-					}
-				} else {
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
+		}
+	});
+var $timjs$elm_collage$Collage$Core$Circle = function (a) {
+	return {$: 'Circle', a: a};
+};
+var $timjs$elm_collage$Collage$circle = $timjs$elm_collage$Collage$Core$Circle;
+var $timjs$elm_collage$Collage$Flat = {$: 'Flat'};
+var $timjs$elm_collage$Collage$Sharp = {$: 'Sharp'};
+var $avh4$elm_color$Color$RgbaSpace = F4(
+	function (a, b, c, d) {
+		return {$: 'RgbaSpace', a: a, b: b, c: c, d: d};
+	});
+var $avh4$elm_color$Color$black = A4($avh4$elm_color$Color$RgbaSpace, 0 / 255, 0 / 255, 0 / 255, 1.0);
+var $timjs$elm_collage$Collage$thin = 2.0;
+var $timjs$elm_collage$Collage$Core$Uniform = function (a) {
+	return {$: 'Uniform', a: a};
+};
+var $timjs$elm_collage$Collage$uniform = $timjs$elm_collage$Collage$Core$Uniform;
+var $timjs$elm_collage$Collage$defaultLineStyle = {
+	cap: $timjs$elm_collage$Collage$Flat,
+	dashPattern: _List_Nil,
+	dashPhase: 0,
+	fill: $timjs$elm_collage$Collage$uniform($avh4$elm_color$Color$black),
+	join: $timjs$elm_collage$Collage$Sharp,
+	thickness: $timjs$elm_collage$Collage$thin
+};
+var $timjs$elm_collage$Collage$broken = F3(
+	function (dashes, thickness, fill) {
+		return _Utils_update(
+			$timjs$elm_collage$Collage$defaultLineStyle,
+			{dashPattern: dashes, fill: fill, thickness: thickness});
+	});
+var $timjs$elm_collage$Collage$solid = $timjs$elm_collage$Collage$broken(_List_Nil);
+var $timjs$elm_collage$Collage$Core$Transparent = {$: 'Transparent'};
+var $timjs$elm_collage$Collage$transparent = $timjs$elm_collage$Collage$Core$Transparent;
+var $timjs$elm_collage$Collage$invisible = A2($timjs$elm_collage$Collage$solid, 0, $timjs$elm_collage$Collage$transparent);
+var $timjs$elm_collage$Collage$Core$Shape = F2(
+	function (a, b) {
+		return {$: 'Shape', a: a, b: b};
+	});
+var $timjs$elm_collage$Collage$Core$collage = function (basic) {
+	return {
+		basic: basic,
+		handlers: _List_Nil,
+		name: $elm$core$Maybe$Nothing,
+		opacity: 1,
+		rotation: 0,
+		scale: _Utils_Tuple2(1, 1),
+		shift: _Utils_Tuple2(0, 0)
+	};
+};
+var $elm$core$Basics$composeL = F3(
+	function (g, f, x) {
+		return g(
+			f(x));
+	});
+var $timjs$elm_collage$Collage$styled = function (style) {
+	return A2(
+		$elm$core$Basics$composeL,
+		$timjs$elm_collage$Collage$Core$collage,
+		$timjs$elm_collage$Collage$Core$Shape(style));
+};
+var $timjs$elm_collage$Collage$filled = function (fill) {
+	return $timjs$elm_collage$Collage$styled(
+		_Utils_Tuple2(fill, $timjs$elm_collage$Collage$invisible));
+};
+var $author$project$Constants$hex2pix = function (_v0) {
+	var x = _v0.a;
+	var y = _v0.b;
+	var cart_y = ($author$project$Constants$unit_x.b * x) + ($author$project$Constants$unit_y.b * y);
+	var cart_x = ($author$project$Constants$unit_x.a * x) + ($author$project$Constants$unit_y.a * y);
+	return _Utils_Tuple2(cart_x, cart_y);
+};
+var $author$project$Constants$ring_size = 0.36 * $author$project$Constants$side;
+var $author$project$Constants$marker_size = 0.6 * $author$project$Constants$ring_size;
+var $avh4$elm_color$Color$red = A4($avh4$elm_color$Color$RgbaSpace, 204 / 255, 0 / 255, 0 / 255, 1.0);
+var $author$project$Constants$p1Color = $avh4$elm_color$Color$red;
+var $avh4$elm_color$Color$green = A4($avh4$elm_color$Color$RgbaSpace, 115 / 255, 210 / 255, 22 / 255, 1.0);
+var $author$project$Constants$p2Color = $avh4$elm_color$Color$green;
+var $timjs$elm_collage$Collage$shift = F2(
+	function (_v0, collage) {
+		var dx = _v0.a;
+		var dy = _v0.b;
+		var _v1 = collage.shift;
+		var x = _v1.a;
+		var y = _v1.b;
+		return _Utils_update(
+			collage,
+			{
+				shift: _Utils_Tuple2(x + dx, y + dy)
+			});
+	});
+var $author$project$Yinsh$drawMarker = F2(
+	function (p, player) {
+		var markerColor = _Utils_eq(player, $author$project$Constants$P1) ? $author$project$Constants$p1Color : $author$project$Constants$p2Color;
+		var _v0 = $author$project$Constants$hex2pix(p);
+		var cx = _v0.a;
+		var cy = _v0.b;
+		return A2(
+			$timjs$elm_collage$Collage$shift,
+			_Utils_Tuple2(cx, cy),
+			A2(
+				$timjs$elm_collage$Collage$filled,
+				$timjs$elm_collage$Collage$uniform(markerColor),
+				$timjs$elm_collage$Collage$circle($author$project$Constants$marker_size)));
+	});
+var $timjs$elm_collage$Collage$outlined = function (linestyle) {
+	return $timjs$elm_collage$Collage$styled(
+		_Utils_Tuple2($timjs$elm_collage$Collage$transparent, linestyle));
+};
+var $timjs$elm_collage$Collage$thick = 4.0;
+var $author$project$Yinsh$drawRing = F2(
+	function (p, player) {
+		var ringColor = _Utils_eq(player, $author$project$Constants$P1) ? $author$project$Constants$p1Color : $author$project$Constants$p2Color;
+		var _v0 = $author$project$Constants$hex2pix(p);
+		var cx = _v0.a;
+		var cy = _v0.b;
+		return A2(
+			$timjs$elm_collage$Collage$shift,
+			_Utils_Tuple2(cx, cy),
+			A2(
+				$timjs$elm_collage$Collage$outlined,
+				A2(
+					$timjs$elm_collage$Collage$solid,
+					$timjs$elm_collage$Collage$thick,
+					$timjs$elm_collage$Collage$uniform(ringColor)),
+				$timjs$elm_collage$Collage$circle($author$project$Constants$ring_size)));
+	});
+var $timjs$elm_collage$Collage$Core$Group = function (a) {
+	return {$: 'Group', a: a};
+};
+var $timjs$elm_collage$Collage$group = A2($elm$core$Basics$composeL, $timjs$elm_collage$Collage$Core$collage, $timjs$elm_collage$Collage$Core$Group);
+var $author$project$Yinsh$addFloatingElems = F2(
+	function (model, canvas) {
+		var _v0 = model.gameState;
+		switch (_v0.$) {
+			case 'PlaceR':
+				var player = _v0.a;
+				return A2($author$project$Helper$isEmptyHex, model.boardData, model.mouseHex) ? $timjs$elm_collage$Collage$group(
+					_List_fromArray(
+						[
+							A2($author$project$Yinsh$drawRing, model.mouseHex, player),
+							canvas
+						])) : canvas;
+			case 'SelectR':
+				var player = _v0.a;
+				return A3($author$project$Helper$isPlayerRing, model.boardData, model.mouseHex, player) ? $timjs$elm_collage$Collage$group(
+					_List_fromArray(
+						[
+							A2($author$project$Yinsh$drawMarker, model.mouseHex, player),
+							canvas
+						])) : canvas;
+			case 'Confirm':
+				var player = _v0.a;
+				var canvasWithMarker = $timjs$elm_collage$Collage$group(
+					_List_fromArray(
+						[
+							A2($author$project$Yinsh$drawMarker, model.selectMouseHex, player),
+							canvas
+						]));
+				return A2($author$project$Helper$isEmptyHex, model.boardData, model.mouseHex) ? $timjs$elm_collage$Collage$group(
+					_List_fromArray(
+						[
+							A2($author$project$Yinsh$drawRing, model.mouseHex, player),
+							canvasWithMarker
+						])) : canvasWithMarker;
+			default:
+				return _Debug_todo(
+					'Yinsh',
+					{
+						start: {line: 233, column: 10},
+						end: {line: 233, column: 20}
+					})('ADD FLOATING ELEMS FOR OTHER STATES!');
 		}
 	});
 var $elm$html$Html$div = _VirtualDom_node('div');
@@ -6522,13 +6935,6 @@ var $author$project$Constants$edges = _List_fromArray(
 		_Utils_Tuple2(5, 3),
 		_Utils_Tuple2(5, 4))
 	]);
-var $author$project$Constants$hex2pix = function (_v0) {
-	var x = _v0.a;
-	var y = _v0.b;
-	var cart_y = ($author$project$Constants$unit_x.b * x) + ($author$project$Constants$unit_y.b * y);
-	var cart_x = ($author$project$Constants$unit_x.a * x) + ($author$project$Constants$unit_y.a * y);
-	return _Utils_Tuple2(cart_x, cart_y);
-};
 var $author$project$Constants$edges_coords = A2(
 	$elm$core$List$map,
 	function (_v0) {
@@ -6539,50 +6945,9 @@ var $author$project$Constants$edges_coords = A2(
 			$author$project$Constants$hex2pix(p2));
 	},
 	$author$project$Constants$edges);
-var $timjs$elm_collage$Collage$Core$Group = function (a) {
-	return {$: 'Group', a: a};
-};
-var $timjs$elm_collage$Collage$Core$collage = function (basic) {
-	return {
-		basic: basic,
-		handlers: _List_Nil,
-		name: $elm$core$Maybe$Nothing,
-		opacity: 1,
-		rotation: 0,
-		scale: _Utils_Tuple2(1, 1),
-		shift: _Utils_Tuple2(0, 0)
-	};
-};
-var $elm$core$Basics$composeL = F3(
-	function (g, f, x) {
-		return g(
-			f(x));
-	});
-var $timjs$elm_collage$Collage$group = A2($elm$core$Basics$composeL, $timjs$elm_collage$Collage$Core$collage, $timjs$elm_collage$Collage$Core$Group);
-var $avh4$elm_color$Color$RgbaSpace = F4(
-	function (a, b, c, d) {
-		return {$: 'RgbaSpace', a: a, b: b, c: c, d: d};
-	});
 var $avh4$elm_color$Color$grey = A4($avh4$elm_color$Color$RgbaSpace, 211 / 255, 215 / 255, 207 / 255, 1.0);
 var $author$project$Constants$boardColor = $avh4$elm_color$Color$grey;
-var $avh4$elm_color$Color$black = A4($avh4$elm_color$Color$RgbaSpace, 0 / 255, 0 / 255, 0 / 255, 1.0);
 var $author$project$Constants$borderColor = $avh4$elm_color$Color$black;
-var $timjs$elm_collage$Collage$Core$Shape = F2(
-	function (a, b) {
-		return {$: 'Shape', a: a, b: b};
-	});
-var $timjs$elm_collage$Collage$styled = function (style) {
-	return A2(
-		$elm$core$Basics$composeL,
-		$timjs$elm_collage$Collage$Core$collage,
-		$timjs$elm_collage$Collage$Core$Shape(style));
-};
-var $timjs$elm_collage$Collage$Core$Transparent = {$: 'Transparent'};
-var $timjs$elm_collage$Collage$transparent = $timjs$elm_collage$Collage$Core$Transparent;
-var $timjs$elm_collage$Collage$outlined = function (linestyle) {
-	return $timjs$elm_collage$Collage$styled(
-		_Utils_Tuple2($timjs$elm_collage$Collage$transparent, linestyle));
-};
 var $timjs$elm_collage$Collage$Core$Polyline = function (a) {
 	return {$: 'Polyline', a: a};
 };
@@ -6593,28 +6958,6 @@ var $timjs$elm_collage$Collage$segment = F2(
 			_List_fromArray(
 				[a, b]));
 	});
-var $timjs$elm_collage$Collage$Flat = {$: 'Flat'};
-var $timjs$elm_collage$Collage$Sharp = {$: 'Sharp'};
-var $timjs$elm_collage$Collage$thin = 2.0;
-var $timjs$elm_collage$Collage$Core$Uniform = function (a) {
-	return {$: 'Uniform', a: a};
-};
-var $timjs$elm_collage$Collage$uniform = $timjs$elm_collage$Collage$Core$Uniform;
-var $timjs$elm_collage$Collage$defaultLineStyle = {
-	cap: $timjs$elm_collage$Collage$Flat,
-	dashPattern: _List_Nil,
-	dashPhase: 0,
-	fill: $timjs$elm_collage$Collage$uniform($avh4$elm_color$Color$black),
-	join: $timjs$elm_collage$Collage$Sharp,
-	thickness: $timjs$elm_collage$Collage$thin
-};
-var $timjs$elm_collage$Collage$broken = F3(
-	function (dashes, thickness, fill) {
-		return _Utils_update(
-			$timjs$elm_collage$Collage$defaultLineStyle,
-			{dashPattern: dashes, fill: fill, thickness: thickness});
-	});
-var $timjs$elm_collage$Collage$solid = $timjs$elm_collage$Collage$broken(_List_Nil);
 var $timjs$elm_collage$Collage$Core$Rectangle = F3(
 	function (a, b, c) {
 		return {$: 'Rectangle', a: a, b: b, c: c};
@@ -6674,84 +7017,23 @@ var $elm$core$List$filter = F2(
 			_List_Nil,
 			list);
 	});
-var $timjs$elm_collage$Collage$Core$Circle = function (a) {
-	return {$: 'Circle', a: a};
-};
-var $timjs$elm_collage$Collage$circle = $timjs$elm_collage$Collage$Core$Circle;
-var $timjs$elm_collage$Collage$invisible = A2($timjs$elm_collage$Collage$solid, 0, $timjs$elm_collage$Collage$transparent);
-var $timjs$elm_collage$Collage$filled = function (fill) {
-	return $timjs$elm_collage$Collage$styled(
-		_Utils_Tuple2(fill, $timjs$elm_collage$Collage$invisible));
-};
-var $author$project$Constants$ring_size = 0.4 * $author$project$Constants$side;
-var $author$project$Constants$marker_size = $author$project$Constants$ring_size - 2;
-var $avh4$elm_color$Color$red = A4($avh4$elm_color$Color$RgbaSpace, 204 / 255, 0 / 255, 0 / 255, 1.0);
-var $author$project$Constants$p1Color = $avh4$elm_color$Color$red;
-var $avh4$elm_color$Color$green = A4($avh4$elm_color$Color$RgbaSpace, 115 / 255, 210 / 255, 22 / 255, 1.0);
-var $author$project$Constants$p2Color = $avh4$elm_color$Color$green;
-var $timjs$elm_collage$Collage$shift = F2(
-	function (_v0, collage) {
-		var dx = _v0.a;
-		var dy = _v0.b;
-		var _v1 = collage.shift;
-		var x = _v1.a;
-		var y = _v1.b;
-		return _Utils_update(
-			collage,
-			{
-				shift: _Utils_Tuple2(x + dx, y + dy)
-			});
-	});
-var $author$project$Yinsh$drawMarker = F2(
-	function (p, isP1) {
-		var markerColor = isP1 ? $author$project$Constants$p1Color : $author$project$Constants$p2Color;
-		var _v0 = $author$project$Constants$hex2pix(p);
-		var cx = _v0.a;
-		var cy = _v0.b;
-		return A2(
-			$timjs$elm_collage$Collage$shift,
-			_Utils_Tuple2(cx, cy),
-			A2(
-				$timjs$elm_collage$Collage$filled,
-				$timjs$elm_collage$Collage$uniform(markerColor),
-				$timjs$elm_collage$Collage$circle($author$project$Constants$marker_size)));
-	});
-var $timjs$elm_collage$Collage$thick = 4.0;
-var $author$project$Yinsh$drawRing = F2(
-	function (p, isP1) {
-		var ringColor = isP1 ? $author$project$Constants$p1Color : $author$project$Constants$p2Color;
-		var _v0 = $author$project$Constants$hex2pix(p);
-		var cx = _v0.a;
-		var cy = _v0.b;
-		return A2(
-			$timjs$elm_collage$Collage$shift,
-			_Utils_Tuple2(cx, cy),
-			A2(
-				$timjs$elm_collage$Collage$outlined,
-				A2(
-					$timjs$elm_collage$Collage$solid,
-					$timjs$elm_collage$Collage$thick,
-					$timjs$elm_collage$Collage$uniform(ringColor)),
-				$timjs$elm_collage$Collage$circle($author$project$Constants$ring_size)));
-	});
+var $elm$core$Basics$neq = _Utils_notEqual;
 var $author$project$Yinsh$renderPiece = function (_v0) {
 	var p = _v0.a;
 	var state = _v0.b;
 	switch (state.$) {
-		case 'R_Marker':
-			return A2($author$project$Yinsh$drawMarker, p, true);
-		case 'G_Marker':
-			return A2($author$project$Yinsh$drawMarker, p, false);
-		case 'R_Ring':
-			return A2($author$project$Yinsh$drawRing, p, true);
-		case 'G_Ring':
-			return A2($author$project$Yinsh$drawRing, p, false);
+		case 'Marker':
+			var player = state.a;
+			return A2($author$project$Yinsh$drawMarker, p, player);
+		case 'Ring':
+			var player = state.a;
+			return A2($author$project$Yinsh$drawRing, p, player);
 		default:
 			return _Debug_todo(
 				'Yinsh',
 				{
-					start: {line: 163, column: 17},
-					end: {line: 163, column: 27}
+					start: {line: 201, column: 17},
+					end: {line: 201, column: 27}
 				})('renderPiece - should not reach here');
 	}
 };
@@ -7681,9 +7963,12 @@ var $author$project$Yinsh$view = function (model) {
 		]);
 	var pieces = $author$project$Yinsh$renderPieces(model.boardData);
 	var board = $author$project$Yinsh$renderBoard($author$project$Constants$edges_coords);
-	var game = $timjs$elm_collage$Collage$group(
-		_List_fromArray(
-			[pieces, board]));
+	var game = A2(
+		$author$project$Yinsh$addFloatingElems,
+		model,
+		$timjs$elm_collage$Collage$group(
+			_List_fromArray(
+				[pieces, board])));
 	return A2(
 		$elm$html$Html$div,
 		A2(

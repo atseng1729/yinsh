@@ -6,7 +6,7 @@ import Color
 
 -- Vertex state
 -- Markers and rings are mutually exclusive in the internal board state
-type Player = P1 | P2
+type Player = P1 | P2 | Both
 type VState = Marker Player | Ring Player | None
 
 -- Since coordinates of the internal state are all integers; we only need to
