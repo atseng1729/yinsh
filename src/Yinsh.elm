@@ -47,6 +47,7 @@ type alias Model =
   , windowWidth : Float
   , windowHeight : Float
   , mouseHex : IntPoint     -- Hex coordinates of mouse, use this!
+  , lastMouseHex : IntPoint -- Hex coordinates of mouse in last state, used for confirm + other stuff maybe in future
   , p1Rings : Int          -- Current Number of Red Rings on Board
   , p2Rings : Int 
   }
@@ -67,6 +68,7 @@ initModel flags = {boardData = emptyBoard,
             windowWidth = toFloat flags.windowWidth,
             windowHeight = toFloat flags.windowHeight,
             mouseHex = (0, 0), 
+            lastMouseHex = (0, 0),
             p1Rings = 0,
             p2Rings = 0}
 
@@ -99,8 +101,10 @@ update msg model =
   case msg of
     -- WindowResize has carries two ints next to it
     WindowResize x y -> ({model | windowWidth = toFloat x, windowHeight = toFloat y}, Cmd.none)
+    
     MouseMoved pt ->
       ({model | mouseHex = pt}, Cmd.none)
+
     MouseClick pt ->
       case model.gameState of
         PlaceR player ->
@@ -115,6 +119,12 @@ update msg model =
               (addRing newModel player, Cmd.none)
           else
             (model, Cmd.none)
+        SelectR player ->
+          if isRing model.boardData pt then 
+            ({model | gameState = Confirm player, lastMouseHex = model.mouseHex}, 
+              Cmd.none)
+          else
+          (model, Cmd.none)
 
         _ -> Debug.todo "Need to determine other cases for mouse click"
 
@@ -183,18 +193,26 @@ renderPieces boardData =
     |> List.map renderPiece
     |> group
 
+-- Master function to show DYNAMIC graphics; STATIC graphics are drawn via view!
 -- Adds a floating ring if appropriate on top of the mouse cursor; should be 
 -- final preprocessing step before drawing collage 
-addFloatingR : Model -> Collage Msg -> Collage Msg
-addFloatingR model canvas =
+addFloatingElems : Model -> Collage Msg -> Collage Msg
+addFloatingElems model canvas =
   case model.gameState of 
     PlaceR player ->
       if (isEmptyHex model.boardData model.mouseHex) then
          group [drawRing model.mouseHex player, canvas]
       else canvas 
+    SelectR player ->
+      case maybeRing model.boardData model.mouseHex of 
+        Just (Ring p_ring) -> 
+          if player == p_ring then 
+            group [drawMarker model.mouseHex player, canvas]
+          else canvas 
+        _ -> canvas 
 
-  -- For now, don't do hover-Ring at other stages
-    _ -> canvas 
+  -- For now, other stages unimplemented
+    _ -> Debug.todo "ADD FLOATING ELEMS FOR OTHER STATES!"
 
 view : Model -> Html Msg
 view model =
@@ -202,7 +220,7 @@ view model =
     -- Add invisible border to prevent annoying edge glitch
     board = renderBoard edges_coords
     pieces = renderPieces model.boardData
-    game = addFloatingR model <| group [pieces, board] -- order important since we want pieces on top of board
+    game = addFloatingElems model <| group [pieces, board] -- order important since we want pieces on top of board
     -- TODO mouse over feature but i think i want to refactor gstate and make this a separate state
     -- if (isValidHex model.mouseHex) then
     --   mouseOverRing = drawRing model.mouseHex _____

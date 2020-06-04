@@ -21,8 +21,8 @@ boardColor = Color.grey
 borderColor = Color.black
 
 -- Size of a ring radius in pixels
-ring_size = 0.4 * side
-marker_size = ring_size - 2
+ring_size = 0.36 * side
+marker_size = 0.6 * ring_size
 
 -- -30 degrees and +90 degrees for x and y axial unit vectors
 radian_x = -1 * pi / 6
