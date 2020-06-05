@@ -37,7 +37,7 @@ isRing boardData p  =
 isPlayerRing : Dict IntPoint VState -> IntPoint -> Player -> Bool
 isPlayerRing boardData p player =
   case maybeRing boardData p of 
-    Just (Ring mplayer) -> player == mplayer
+    Just (Ring rplayer) -> player == rplayer
     _ -> False 
 
 -- Is there a marker at this point?
@@ -46,6 +46,13 @@ isMarker boardData p  =
   case maybeMarker boardData p of 
     Just _ -> True
     Nothing -> False 
+
+-- Is there a marker of this player at this point?
+isMarkerPlayer : Dict IntPoint VState -> IntPoint -> Player -> Bool
+isMarkerPlayer boardData p player =
+  case maybeMarker boardData p of 
+    Just (Marker mplayer) -> player == mplayer
+    _ -> False 
 
 getSign : Int -> Int
 getSign x =
@@ -101,6 +108,17 @@ checkPointsBetween boardData curP prevRingP visitedEmptySpace =
       updatedVisitEmpty = visitedEmptySpace || (isEmptyHex boardData curP)
     in checkPointsBetween boardData newP prevRingP updatedVisitEmpty
 
+-- checks is there a row between start and end for player P
+-- ASSUMES start, end are collinear... we'll call isCollinear right now for debugging purposes; remove in prod
+isRow : Dict IntPoint VState -> Player -> IntPoint -> IntPoint -> Bool 
+isRow boardData pl start end =
+  if not (isCollinear start end) then 
+    Debug.todo "ERROR: points fed to isRow should be collinear..."
+  else if (start == end) && (isMarkerPlayer boardData start pl) then 
+    True 
+  else 
+    let nextpt = moveOneStep start end in 
+    (isMarkerPlayer boardData start pl) && isRow boardData pl nextpt end
 
 isCollinear : IntPoint -> IntPoint -> Bool
 isCollinear (x1, y1) (x2, y2) =

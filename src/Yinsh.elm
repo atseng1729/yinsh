@@ -23,7 +23,7 @@ import Helper exposing (..)
 -- PlaceR -> Placing the rings initially
 -- SelectR -> selecting ring to move
 -- Confirm -> choosing the move out of the possible ones
--- RemoveR -> remove a ring upon 5-in-row (or many if 2 5s are formed at once)
+-- RemoveR -> remove a ring upon 5-in-row (or many if 2 5s are formed at once, have to figure out how to select row for these edge cases...)
 -- Win -> Display win message
 -- True/False to toggle which side is moving
 -- Colors: R, G
@@ -49,6 +49,7 @@ type alias Model =
   , p1Rings : Int          -- Current Number of Red Rings on Board
   , p2Rings : Int
   , validMoves : List IntPoint -- List of valid coordinates that can be moved to; only used currently for drawing possible moves
+  , rowsFormed : List Row 
   }
 
 type alias Flags =
@@ -71,7 +72,8 @@ initModel flags = {boardData = emptyBoard,
             selectMouseHex = (0, 0),
             p1Rings = 0,
             p2Rings = 0, 
-            validMoves = []}
+            validMoves = [], 
+            rowsFormed = []}
 
 -- Given model, color, and change,
 changeRings : Model -> Player -> Int -> Model

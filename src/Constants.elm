@@ -13,6 +13,12 @@ type VState = Marker Player | Ring Player | None
 -- touch floats when we work with drawing
 type alias IntPoint = (Int, Int)
 
+-- Start of the row (with LOWER.) coordinates, end of the row
+-- dist(start, end) = 5 so end-start should be 4 apart
+type alias Row = {player: Player, 
+                  start: IntPoint, 
+                  end: IntPoint}
+
 -- Length of a side in pixels
 side = 50
 p1Color = Color.red
@@ -20,7 +26,7 @@ p2Color = Color.green
 boardColor = Color.grey
 borderColor = Color.black
 
--- For valid move dots
+-- For valid move dots, row dots
 dotColor = Color.black
 
 -- Size of a ring radius in pixels
