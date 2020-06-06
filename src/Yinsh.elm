@@ -1,5 +1,5 @@
 -- For debugging purposes, exposing everything
-module Yinsh exposing (..)
+module Yinsh exposing (main)
 
 import Browser
 import Browser.Events as E
@@ -27,7 +27,7 @@ import Helper exposing (..)
 -- Win -> Display win message
 -- True/False to toggle which side is moving
 -- Colors: R, G
-type GState = PlaceR Player | SelectR Player | Confirm Player | RemoveR Player Int | Win Player
+type GState = PlaceR Player | SelectR Player | Confirm Player | RemoveM Player | RemoveR Player Int | Win Player
 
 main : Program Flags Model Msg
 main =
@@ -49,7 +49,8 @@ type alias Model =
   , p1Rings : Int          -- Current Number of Red Rings on Board
   , p2Rings : Int
   , validMoves : List IntPoint -- List of valid coordinates that can be moved to; only used currently for drawing possible moves
-  , rowsFormed : List Row 
+  , possibleRemoveMarkers : List IntPoint
+  , toBeRemovedMarkers : List IntPoint
   }
 
 type alias Flags =
@@ -59,21 +60,23 @@ type alias Flags =
 
 type Msg = WindowResize Int Int |
            MouseMoved IntPoint |
-           MouseClick IntPoint |
-           UpdateValidPts -- trigger message to recalculate valid points and update model accordingly
+           MouseClick IntPoint
 
 initModel : Flags -> Model
-initModel flags = {boardData = emptyBoard,
-            gameState = PlaceR P1,
-            score = (0, 0),
-            windowWidth = toFloat flags.windowWidth,
-            windowHeight = toFloat flags.windowHeight,
-            mouseHex = (0, 0),
-            selectMouseHex = (0, 0),
-            p1Rings = 0,
-            p2Rings = 0, 
-            validMoves = [], 
-            rowsFormed = []}
+initModel flags =
+  { boardData = emptyBoard
+  , gameState = PlaceR P1
+  , score = (0, 0)
+  , windowWidth = toFloat flags.windowWidth
+  , windowHeight = toFloat flags.windowHeight
+  , mouseHex = (0, 0)
+  , selectMouseHex = (0, 0)
+  , p1Rings = 0
+  , p2Rings = 0
+  , validMoves = []
+  , possibleRemoveMarkers = []
+  , toBeRemovedMarkers = []
+  }
 
 -- Given model, color, and change,
 changeRings : Model -> Player -> Int -> Model
@@ -102,11 +105,7 @@ subscriptions model =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    -- WindowResize has carries two ints next to it. NOTE: VALIDPOINTS IS NOT WELL KEPT TRACK OF RN
-    UpdateValidPts ->
-      let candidates = collinearPoints 9 model.selectMouseHex 
-          valids = List.filter (\pt -> isValidMove model.boardData pt model.selectMouseHex) candidates
-      in ({model | validMoves = valids}, Cmd.none)
+    -- WindowResize has carries two ints next to it.
 
     WindowResize x y -> ({model | windowWidth = toFloat x, windowHeight = toFloat y}, Cmd.none)
 
@@ -129,7 +128,8 @@ update msg model =
             (model, Cmd.none)
         SelectR player ->
           if isPlayerRing model.boardData pt player then -- Process the new valid moves for display in confirm
-            update UpdateValidPts {model | gameState = Confirm player, selectMouseHex = model.mouseHex}
+            let newValidMoves = getValidMoves model.boardData pt
+            in ({model | gameState = Confirm player, selectMouseHex = model.mouseHex, validMoves = newValidMoves}, Cmd.none)
           else
             (model, Cmd.none)
         Confirm player ->
@@ -143,12 +143,67 @@ update msg model =
                 |> Dict.insert model.selectMouseHex (Marker player)
                 |> flipPointsBetween curP pt
             in
-              ({model | gameState = newGState, boardData = newBoardData}, Cmd.none)
+              case checkAllRows newBoardData player of
+                Just (0, points) ->
+                  ({model | gameState = RemoveM player, boardData = newBoardData, possibleRemoveMarkers = points, toBeRemovedMarkers = []}, Cmd.none)
+                Just (numRings, points) ->
+                  ({model | gameState = RemoveR player numRings, boardData = newBoardData, toBeRemovedMarkers = points}, Cmd.none)
+                Nothing ->
+                  ({model | gameState = newGState, boardData = newBoardData}, Cmd.none)
           else -- if click on invalid point, then transition back to select phase
             ({model | gameState = SelectR player, selectMouseHex = model.mouseHex},
               Cmd.none)
-
-        _ -> Debug.todo "Need to determine other cases for mouse click"
+        RemoveM player ->
+          if (isMarkerPlayer model.boardData pt player) && not (List.member pt model.toBeRemovedMarkers) then
+            let
+              newRemovedMarkers = pt::model.toBeRemovedMarkers
+              fiveSelected = 5 == List.length newRemovedMarkers
+            in
+              if not fiveSelected then
+                ({model | toBeRemovedMarkers = newRemovedMarkers}, Cmd.none)
+              else if isValidRow newRemovedMarkers then
+                ({model | gameState = RemoveR player 1, toBeRemovedMarkers = newRemovedMarkers}, Cmd.none)
+              else
+                ({model | toBeRemovedMarkers = []}, Cmd.none)
+          else
+            (model, Cmd.none)
+        RemoveR player numRings ->
+          if isPlayerRing model.boardData pt player then
+            if numRings == 1 then
+              let
+                otherPlayer = otherP player
+                newBoardData = removeMarkers model.boardData model.toBeRemovedMarkers
+                  |> Dict.insert pt None
+                newScore = updateScore model.score player
+              in
+                if isWinner newScore then
+                  ({model | gameState = Win player, boardData = newBoardData, score = newScore}, Cmd.none)
+                else -- check if opponent had any rows formed
+                  case checkAllRows newBoardData player of
+                    Just (0, points) ->
+                      ({model | gameState = RemoveM player, boardData = newBoardData, possibleRemoveMarkers = points, score = newScore, toBeRemovedMarkers = []}, Cmd.none)
+                    Just (newNumRings, points) ->
+                      ({model | gameState = RemoveR player newNumRings, boardData = newBoardData, toBeRemovedMarkers = points, score = newScore}, Cmd.none)
+                    Nothing ->
+                      case checkAllRows newBoardData otherPlayer of
+                        Just (0, points) ->
+                          ({model | gameState = RemoveM otherPlayer, boardData = newBoardData, possibleRemoveMarkers = points, score = newScore, toBeRemovedMarkers = []}, Cmd.none)
+                        Just (otherPNumRings, points) ->
+                          ({model | gameState = RemoveR otherPlayer otherPNumRings, boardData = newBoardData, toBeRemovedMarkers = points, score = newScore}, Cmd.none)
+                        Nothing ->
+                          ({model | gameState = SelectR otherPlayer, boardData = newBoardData, score = newScore}, Cmd.none)
+            else
+              let
+                newScore = updateScore model.score player
+                newGState = if isWinner newScore then Win player else RemoveR player (numRings - 1)
+                newBoardData = model.boardData
+                  |> Dict.insert pt None
+              in
+                ({model | gameState = newGState, boardData = newBoardData, score = newScore}, Cmd.none)
+          else
+            (model, Cmd.none)
+        Win player ->
+          (model, Cmd.none)
 
 --------------------------
 -- see https://github.com/elm/browser/blob/1.0.2/examples/src/Drag.elm for example of decoder interaction
@@ -174,28 +229,69 @@ mouseInputToHex model (mx, my) =
 drawRing : IntPoint -> Player -> Collage Msg
 drawRing p player =
   let
-    (cx, cy) = hex2pix p
     ringColor = if (player == P1) then p1Color else p2Color
   in
-    (circle ring_size)
+    circle ring_size
       |> outlined (solid thick (uniform ringColor))
-      |> shift (cx, cy)
+      |> shift (hex2pix p)
+
+blackenRing : IntPoint -> Collage Msg
+blackenRing p =
+  circle ring_size
+    |> outlined (solid thick (uniform blackenColor))
+    |> shift (hex2pix p)
+
+scoreRing : Player -> Int -> Bool -> Collage Msg
+scoreRing player num colored =
+  let
+    floatNum = toFloat num
+    ringColor = if not colored then boardColor else if player == P1 then p1Color else p2Color
+    position = if player == P1 then
+                 (-5 * side + (7.8 - 2.2 * floatNum) * ring_size, -5 * side + 1.2 * ring_size)
+               else
+                 (5 * side - (7.8 - 2.2 * floatNum) * ring_size, 5 * side - 1.2 * ring_size)
+  in
+    circle ring_size
+      |> outlined (solid thick (uniform ringColor))
+      |> shift position
 
 drawMarker : IntPoint -> Player -> Collage Msg
 drawMarker p player =
   let
-    (cx, cy) = hex2pix p
     markerColor = if (player == P1) then p1Color else p2Color
   in
-    (circle marker_size)
+    circle marker_size
       |> filled (uniform markerColor)
-      |> shift (cx, cy)
+      |> shift (hex2pix p)
 
 -- drawDot; just draw a smaller black dot
-drawDot : IntPoint -> Collage Msg 
-drawDot p = 
-  (circle (marker_size * 0.6)) |> filled (uniform dotColor) |> shift (hex2pix p)
+drawDot : IntPoint -> Collage Msg
+drawDot p =
+  circle dot_size
+    |> filled (uniform dotColor)
+    |> shift (hex2pix p)
 
+highlightMarker : IntPoint -> Collage Msg
+highlightMarker p =
+  circle marker_size
+    |> outlined (solid thick (uniform highlightColor))
+    |> shift (hex2pix p)
+
+blackenMarker : IntPoint -> Collage Msg
+blackenMarker p =
+  circle marker_size
+    |> filled (uniform blackenColor)
+    |> shift (hex2pix p)
+
+renderScore : (Int, Int) -> Collage Msg
+renderScore (x, y) =
+  [ scoreRing P1 1 (x >= 1)
+  , scoreRing P1 2 (x >= 2)
+  , scoreRing P1 3 (x >= 3)
+  , scoreRing P2 1 (y >= 1)
+  , scoreRing P2 2 (y >= 2)
+  , scoreRing P2 3 (y >= 3)
+  ] |> group
 
 renderBoard : List (Point, Point) -> Collage Msg
 renderBoard edges_coords =
@@ -207,6 +303,12 @@ renderBoard edges_coords =
   in
   group [border, edges]
 
+declareWinner : Player -> Html Msg
+declareWinner player =
+  case player of
+    P1 -> h3 [] [text "Player 1 won!!"]
+    P2 -> h3 [] [text "Player 2 won!!"]
+
 renderPiece : (IntPoint, VState) -> Collage Msg
 renderPiece (p, state) =
   case state of
@@ -216,8 +318,16 @@ renderPiece (p, state) =
 
 -- Used to add extra dots for valid move markers
 renderDots : List (IntPoint) -> Collage Msg
-renderDots ps = 
-  group <| List.map (\p -> drawDot p) ps
+renderDots ps =
+  group <| List.map drawDot ps
+
+renderHighlighting : List (IntPoint) -> Collage Msg
+renderHighlighting ps =
+  group <| List.map highlightMarker ps
+
+renderBlackenMarkers : List (IntPoint) -> Collage Msg
+renderBlackenMarkers ps =
+  group <| List.map blackenMarker ps
 
 renderPieces : Dict IntPoint VState -> Collage Msg
 renderPieces boardData =
@@ -249,16 +359,24 @@ addFloatingElems model canvas =
         if (isValidMove model.boardData model.mouseHex model.selectMouseHex) then
           group [drawRing model.mouseHex player, canvasWithMarker]
         else canvasWithMarker
-  -- For now, other stages unimplemented
-    _ -> Debug.todo "ADD FLOATING ELEMS FOR OTHER STATES!"
+    RemoveM player ->
+      group [renderHighlighting model.possibleRemoveMarkers, renderBlackenMarkers model.toBeRemovedMarkers, canvas]
+    RemoveR player _ ->
+      if isPlayerRing model.boardData model.mouseHex player then
+        group [blackenRing model.mouseHex, renderBlackenMarkers model.toBeRemovedMarkers, canvas]
+      else
+        group [renderBlackenMarkers model.toBeRemovedMarkers, canvas]
+    Win player ->
+      canvas
 
 view : Model -> Html Msg
 view model =
   let
     -- Add invisible border to prevent annoying edge glitch
     board = renderBoard edges_coords
+    score = renderScore model.score
     pieces = renderPieces model.boardData
-    game = addFloatingElems model <| group [pieces, board] -- order important since we want pieces on top of board
+    game = addFloatingElems model <| group [pieces, score, board] -- order important since we want pieces on top of board
     styles =
       [ ("position", "fixed")
       , ("top", "50%")
@@ -266,4 +384,6 @@ view model =
       , ("transform", "translate(-50%, -50%)")
       ]
   in
-    div (List.map (\(k, v) -> Attr.style k v) styles) [svg game]
+    case model.gameState of
+      Win player -> div (List.map (\(k, v) -> Attr.style k v) styles) [svg game, declareWinner player]
+      _          -> div (List.map (\(k, v) -> Attr.style k v) styles) [svg game]

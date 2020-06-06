@@ -5379,8 +5379,11 @@ var $author$project$Yinsh$initModel = function (flags) {
 		mouseHex: _Utils_Tuple2(0, 0),
 		p1Rings: 0,
 		p2Rings: 0,
+		possibleRemoveMarkers: _List_Nil,
 		score: _Utils_Tuple2(0, 0),
 		selectMouseHex: _Utils_Tuple2(0, 0),
+		toBeRemovedMarkers: _List_Nil,
+		validMoves: _List_Nil,
 		windowHeight: flags.windowHeight,
 		windowWidth: flags.windowWidth
 	};
@@ -5766,36 +5769,71 @@ var $author$project$Yinsh$Confirm = function (a) {
 var $author$project$Constants$Marker = function (a) {
 	return {$: 'Marker', a: a};
 };
+var $author$project$Yinsh$RemoveM = function (a) {
+	return {$: 'RemoveM', a: a};
+};
+var $author$project$Yinsh$RemoveR = F2(
+	function (a, b) {
+		return {$: 'RemoveR', a: a, b: b};
+	});
 var $author$project$Constants$Ring = function (a) {
 	return {$: 'Ring', a: a};
 };
 var $author$project$Yinsh$SelectR = function (a) {
 	return {$: 'SelectR', a: a};
 };
-var $elm$core$Debug$todo = _Debug_todo;
+var $author$project$Yinsh$Win = function (a) {
+	return {$: 'Win', a: a};
+};
 var $author$project$Yinsh$changeRings = F3(
 	function (model, p, n) {
-		switch (p.$) {
-			case 'P1':
-				return _Utils_update(
-					model,
-					{p1Rings: model.p1Rings + n});
-			case 'P2':
-				return _Utils_update(
-					model,
-					{p2Rings: model.p2Rings + n});
-			default:
-				return _Debug_todo(
-					'Yinsh',
-					{
-						start: {line: 79, column: 13},
-						end: {line: 79, column: 23}
-					})('changeRings - Should not reach here');
+		if (p.$ === 'P1') {
+			return _Utils_update(
+				model,
+				{p1Rings: model.p1Rings + n});
+		} else {
+			return _Utils_update(
+				model,
+				{p2Rings: model.p2Rings + n});
 		}
 	});
 var $author$project$Yinsh$addRing = F2(
 	function (model, player) {
 		return A3($author$project$Yinsh$changeRings, model, player, 1);
+	});
+var $elm$core$List$any = F2(
+	function (isOkay, list) {
+		any:
+		while (true) {
+			if (!list.b) {
+				return false;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				if (isOkay(x)) {
+					return true;
+				} else {
+					var $temp$isOkay = isOkay,
+						$temp$list = xs;
+					isOkay = $temp$isOkay;
+					list = $temp$list;
+					continue any;
+				}
+			}
+		}
+	});
+var $elm$core$Basics$composeL = F3(
+	function (g, f, x) {
+		return g(
+			f(x));
+	});
+var $elm$core$Basics$not = _Basics_not;
+var $elm$core$List$all = F2(
+	function (isOkay, list) {
+		return !A2(
+			$elm$core$List$any,
+			A2($elm$core$Basics$composeL, $elm$core$Basics$not, isOkay),
+			list);
 	});
 var $elm$core$Dict$get = F2(
 	function (targetKey, dict) {
@@ -5828,6 +5866,1073 @@ var $elm$core$Dict$get = F2(
 			}
 		}
 	});
+var $author$project$Helper$checkRow = F3(
+	function (boardData, player, points) {
+		return A2(
+			$elm$core$List$all,
+			function (status) {
+				return _Utils_eq(
+					status,
+					$elm$core$Maybe$Just(
+						$author$project$Constants$Marker(player)));
+			},
+			A2(
+				$elm$core$List$map,
+				function (p) {
+					return A2($elm$core$Dict$get, p, boardData);
+				},
+				points)) ? points : _List_Nil;
+	});
+var $elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
+		} else {
+			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
+		}
+	});
+var $elm$core$List$concat = function (lists) {
+	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
+};
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
+var $elm$core$Set$Set_elm_builtin = function (a) {
+	return {$: 'Set_elm_builtin', a: a};
+};
+var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
+var $elm$core$Set$insert = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+	});
+var $elm$core$Set$fromList = function (list) {
+	return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
+};
+var $elm$core$List$isEmpty = function (xs) {
+	if (!xs.b) {
+		return true;
+	} else {
+		return false;
+	}
+};
+var $author$project$Constants$possibleRows = _List_fromArray(
+	[
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-5, -4),
+			_Utils_Tuple2(-4, -4),
+			_Utils_Tuple2(-3, -4),
+			_Utils_Tuple2(-2, -4),
+			_Utils_Tuple2(-1, -4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-5, -4),
+			_Utils_Tuple2(-4, -3),
+			_Utils_Tuple2(-3, -2),
+			_Utils_Tuple2(-2, -1),
+			_Utils_Tuple2(-1, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-5, -3),
+			_Utils_Tuple2(-4, -3),
+			_Utils_Tuple2(-3, -3),
+			_Utils_Tuple2(-2, -3),
+			_Utils_Tuple2(-1, -3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-5, -3),
+			_Utils_Tuple2(-4, -2),
+			_Utils_Tuple2(-3, -1),
+			_Utils_Tuple2(-2, 0),
+			_Utils_Tuple2(-1, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-5, -2),
+			_Utils_Tuple2(-4, -2),
+			_Utils_Tuple2(-3, -2),
+			_Utils_Tuple2(-2, -2),
+			_Utils_Tuple2(-1, -2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-5, -2),
+			_Utils_Tuple2(-4, -1),
+			_Utils_Tuple2(-3, 0),
+			_Utils_Tuple2(-2, 1),
+			_Utils_Tuple2(-1, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-5, -1),
+			_Utils_Tuple2(-4, -1),
+			_Utils_Tuple2(-3, -1),
+			_Utils_Tuple2(-2, -1),
+			_Utils_Tuple2(-1, -1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-5, -1),
+			_Utils_Tuple2(-4, 0),
+			_Utils_Tuple2(-3, 1),
+			_Utils_Tuple2(-2, 2),
+			_Utils_Tuple2(-1, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, -5),
+			_Utils_Tuple2(-4, -4),
+			_Utils_Tuple2(-4, -3),
+			_Utils_Tuple2(-4, -2),
+			_Utils_Tuple2(-4, -1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, -5),
+			_Utils_Tuple2(-3, -4),
+			_Utils_Tuple2(-2, -3),
+			_Utils_Tuple2(-1, -2),
+			_Utils_Tuple2(0, -1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, -4),
+			_Utils_Tuple2(-4, -3),
+			_Utils_Tuple2(-4, -2),
+			_Utils_Tuple2(-4, -1),
+			_Utils_Tuple2(-4, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, -4),
+			_Utils_Tuple2(-3, -4),
+			_Utils_Tuple2(-2, -4),
+			_Utils_Tuple2(-1, -4),
+			_Utils_Tuple2(0, -4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, -4),
+			_Utils_Tuple2(-3, -3),
+			_Utils_Tuple2(-2, -2),
+			_Utils_Tuple2(-1, -1),
+			_Utils_Tuple2(0, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, -3),
+			_Utils_Tuple2(-4, -2),
+			_Utils_Tuple2(-4, -1),
+			_Utils_Tuple2(-4, 0),
+			_Utils_Tuple2(-4, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, -3),
+			_Utils_Tuple2(-3, -3),
+			_Utils_Tuple2(-2, -3),
+			_Utils_Tuple2(-1, -3),
+			_Utils_Tuple2(0, -3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, -3),
+			_Utils_Tuple2(-3, -2),
+			_Utils_Tuple2(-2, -1),
+			_Utils_Tuple2(-1, 0),
+			_Utils_Tuple2(0, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, -2),
+			_Utils_Tuple2(-3, -2),
+			_Utils_Tuple2(-2, -2),
+			_Utils_Tuple2(-1, -2),
+			_Utils_Tuple2(0, -2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, -2),
+			_Utils_Tuple2(-3, -1),
+			_Utils_Tuple2(-2, 0),
+			_Utils_Tuple2(-1, 1),
+			_Utils_Tuple2(0, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, -1),
+			_Utils_Tuple2(-3, -1),
+			_Utils_Tuple2(-2, -1),
+			_Utils_Tuple2(-1, -1),
+			_Utils_Tuple2(0, -1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, -1),
+			_Utils_Tuple2(-3, 0),
+			_Utils_Tuple2(-2, 1),
+			_Utils_Tuple2(-1, 2),
+			_Utils_Tuple2(0, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, 0),
+			_Utils_Tuple2(-3, 0),
+			_Utils_Tuple2(-2, 0),
+			_Utils_Tuple2(-1, 0),
+			_Utils_Tuple2(0, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, 0),
+			_Utils_Tuple2(-3, 1),
+			_Utils_Tuple2(-2, 2),
+			_Utils_Tuple2(-1, 3),
+			_Utils_Tuple2(0, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-4, 1),
+			_Utils_Tuple2(-3, 1),
+			_Utils_Tuple2(-2, 1),
+			_Utils_Tuple2(-1, 1),
+			_Utils_Tuple2(0, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, -5),
+			_Utils_Tuple2(-3, -4),
+			_Utils_Tuple2(-3, -3),
+			_Utils_Tuple2(-3, -2),
+			_Utils_Tuple2(-3, -1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, -5),
+			_Utils_Tuple2(-2, -4),
+			_Utils_Tuple2(-1, -3),
+			_Utils_Tuple2(0, -2),
+			_Utils_Tuple2(1, -1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, -4),
+			_Utils_Tuple2(-3, -3),
+			_Utils_Tuple2(-3, -2),
+			_Utils_Tuple2(-3, -1),
+			_Utils_Tuple2(-3, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, -4),
+			_Utils_Tuple2(-2, -4),
+			_Utils_Tuple2(-1, -4),
+			_Utils_Tuple2(0, -4),
+			_Utils_Tuple2(1, -4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, -4),
+			_Utils_Tuple2(-2, -3),
+			_Utils_Tuple2(-1, -2),
+			_Utils_Tuple2(0, -1),
+			_Utils_Tuple2(1, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, -3),
+			_Utils_Tuple2(-3, -2),
+			_Utils_Tuple2(-3, -1),
+			_Utils_Tuple2(-3, 0),
+			_Utils_Tuple2(-3, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, -3),
+			_Utils_Tuple2(-2, -3),
+			_Utils_Tuple2(-1, -3),
+			_Utils_Tuple2(0, -3),
+			_Utils_Tuple2(1, -3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, -3),
+			_Utils_Tuple2(-2, -2),
+			_Utils_Tuple2(-1, -1),
+			_Utils_Tuple2(0, 0),
+			_Utils_Tuple2(1, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, -2),
+			_Utils_Tuple2(-3, -1),
+			_Utils_Tuple2(-3, 0),
+			_Utils_Tuple2(-3, 1),
+			_Utils_Tuple2(-3, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, -2),
+			_Utils_Tuple2(-2, -2),
+			_Utils_Tuple2(-1, -2),
+			_Utils_Tuple2(0, -2),
+			_Utils_Tuple2(1, -2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, -2),
+			_Utils_Tuple2(-2, -1),
+			_Utils_Tuple2(-1, 0),
+			_Utils_Tuple2(0, 1),
+			_Utils_Tuple2(1, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, -1),
+			_Utils_Tuple2(-2, -1),
+			_Utils_Tuple2(-1, -1),
+			_Utils_Tuple2(0, -1),
+			_Utils_Tuple2(1, -1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, -1),
+			_Utils_Tuple2(-2, 0),
+			_Utils_Tuple2(-1, 1),
+			_Utils_Tuple2(0, 2),
+			_Utils_Tuple2(1, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, 0),
+			_Utils_Tuple2(-2, 0),
+			_Utils_Tuple2(-1, 0),
+			_Utils_Tuple2(0, 0),
+			_Utils_Tuple2(1, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, 0),
+			_Utils_Tuple2(-2, 1),
+			_Utils_Tuple2(-1, 2),
+			_Utils_Tuple2(0, 3),
+			_Utils_Tuple2(1, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, 1),
+			_Utils_Tuple2(-2, 1),
+			_Utils_Tuple2(-1, 1),
+			_Utils_Tuple2(0, 1),
+			_Utils_Tuple2(1, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, 1),
+			_Utils_Tuple2(-2, 2),
+			_Utils_Tuple2(-1, 3),
+			_Utils_Tuple2(0, 4),
+			_Utils_Tuple2(1, 5)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-3, 2),
+			_Utils_Tuple2(-2, 2),
+			_Utils_Tuple2(-1, 2),
+			_Utils_Tuple2(0, 2),
+			_Utils_Tuple2(1, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, -5),
+			_Utils_Tuple2(-2, -4),
+			_Utils_Tuple2(-2, -3),
+			_Utils_Tuple2(-2, -2),
+			_Utils_Tuple2(-2, -1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, -5),
+			_Utils_Tuple2(-1, -4),
+			_Utils_Tuple2(0, -3),
+			_Utils_Tuple2(1, -2),
+			_Utils_Tuple2(2, -1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, -4),
+			_Utils_Tuple2(-2, -3),
+			_Utils_Tuple2(-2, -2),
+			_Utils_Tuple2(-2, -1),
+			_Utils_Tuple2(-2, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, -4),
+			_Utils_Tuple2(-1, -3),
+			_Utils_Tuple2(0, -2),
+			_Utils_Tuple2(1, -1),
+			_Utils_Tuple2(2, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, -3),
+			_Utils_Tuple2(-2, -2),
+			_Utils_Tuple2(-2, -1),
+			_Utils_Tuple2(-2, 0),
+			_Utils_Tuple2(-2, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, -3),
+			_Utils_Tuple2(-1, -3),
+			_Utils_Tuple2(0, -3),
+			_Utils_Tuple2(1, -3),
+			_Utils_Tuple2(2, -3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, -3),
+			_Utils_Tuple2(-1, -2),
+			_Utils_Tuple2(0, -1),
+			_Utils_Tuple2(1, 0),
+			_Utils_Tuple2(2, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, -2),
+			_Utils_Tuple2(-2, -1),
+			_Utils_Tuple2(-2, 0),
+			_Utils_Tuple2(-2, 1),
+			_Utils_Tuple2(-2, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, -2),
+			_Utils_Tuple2(-1, -2),
+			_Utils_Tuple2(0, -2),
+			_Utils_Tuple2(1, -2),
+			_Utils_Tuple2(2, -2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, -2),
+			_Utils_Tuple2(-1, -1),
+			_Utils_Tuple2(0, 0),
+			_Utils_Tuple2(1, 1),
+			_Utils_Tuple2(2, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, -1),
+			_Utils_Tuple2(-2, 0),
+			_Utils_Tuple2(-2, 1),
+			_Utils_Tuple2(-2, 2),
+			_Utils_Tuple2(-2, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, -1),
+			_Utils_Tuple2(-1, -1),
+			_Utils_Tuple2(0, -1),
+			_Utils_Tuple2(1, -1),
+			_Utils_Tuple2(2, -1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, -1),
+			_Utils_Tuple2(-1, 0),
+			_Utils_Tuple2(0, 1),
+			_Utils_Tuple2(1, 2),
+			_Utils_Tuple2(2, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, 0),
+			_Utils_Tuple2(-1, 0),
+			_Utils_Tuple2(0, 0),
+			_Utils_Tuple2(1, 0),
+			_Utils_Tuple2(2, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, 0),
+			_Utils_Tuple2(-1, 1),
+			_Utils_Tuple2(0, 2),
+			_Utils_Tuple2(1, 3),
+			_Utils_Tuple2(2, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, 1),
+			_Utils_Tuple2(-1, 1),
+			_Utils_Tuple2(0, 1),
+			_Utils_Tuple2(1, 1),
+			_Utils_Tuple2(2, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, 1),
+			_Utils_Tuple2(-1, 2),
+			_Utils_Tuple2(0, 3),
+			_Utils_Tuple2(1, 4),
+			_Utils_Tuple2(2, 5)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, 2),
+			_Utils_Tuple2(-1, 2),
+			_Utils_Tuple2(0, 2),
+			_Utils_Tuple2(1, 2),
+			_Utils_Tuple2(2, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-2, 3),
+			_Utils_Tuple2(-1, 3),
+			_Utils_Tuple2(0, 3),
+			_Utils_Tuple2(1, 3),
+			_Utils_Tuple2(2, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, -5),
+			_Utils_Tuple2(-1, -4),
+			_Utils_Tuple2(-1, -3),
+			_Utils_Tuple2(-1, -2),
+			_Utils_Tuple2(-1, -1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, -5),
+			_Utils_Tuple2(0, -4),
+			_Utils_Tuple2(1, -3),
+			_Utils_Tuple2(2, -2),
+			_Utils_Tuple2(3, -1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, -4),
+			_Utils_Tuple2(-1, -3),
+			_Utils_Tuple2(-1, -2),
+			_Utils_Tuple2(-1, -1),
+			_Utils_Tuple2(-1, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, -4),
+			_Utils_Tuple2(0, -3),
+			_Utils_Tuple2(1, -2),
+			_Utils_Tuple2(2, -1),
+			_Utils_Tuple2(3, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, -3),
+			_Utils_Tuple2(-1, -2),
+			_Utils_Tuple2(-1, -1),
+			_Utils_Tuple2(-1, 0),
+			_Utils_Tuple2(-1, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, -3),
+			_Utils_Tuple2(0, -2),
+			_Utils_Tuple2(1, -1),
+			_Utils_Tuple2(2, 0),
+			_Utils_Tuple2(3, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, -2),
+			_Utils_Tuple2(-1, -1),
+			_Utils_Tuple2(-1, 0),
+			_Utils_Tuple2(-1, 1),
+			_Utils_Tuple2(-1, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, -2),
+			_Utils_Tuple2(0, -2),
+			_Utils_Tuple2(1, -2),
+			_Utils_Tuple2(2, -2),
+			_Utils_Tuple2(3, -2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, -2),
+			_Utils_Tuple2(0, -1),
+			_Utils_Tuple2(1, 0),
+			_Utils_Tuple2(2, 1),
+			_Utils_Tuple2(3, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, -1),
+			_Utils_Tuple2(-1, 0),
+			_Utils_Tuple2(-1, 1),
+			_Utils_Tuple2(-1, 2),
+			_Utils_Tuple2(-1, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, -1),
+			_Utils_Tuple2(0, -1),
+			_Utils_Tuple2(1, -1),
+			_Utils_Tuple2(2, -1),
+			_Utils_Tuple2(3, -1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, -1),
+			_Utils_Tuple2(0, 0),
+			_Utils_Tuple2(1, 1),
+			_Utils_Tuple2(2, 2),
+			_Utils_Tuple2(3, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, 0),
+			_Utils_Tuple2(-1, 1),
+			_Utils_Tuple2(-1, 2),
+			_Utils_Tuple2(-1, 3),
+			_Utils_Tuple2(-1, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, 0),
+			_Utils_Tuple2(0, 0),
+			_Utils_Tuple2(1, 0),
+			_Utils_Tuple2(2, 0),
+			_Utils_Tuple2(3, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, 0),
+			_Utils_Tuple2(0, 1),
+			_Utils_Tuple2(1, 2),
+			_Utils_Tuple2(2, 3),
+			_Utils_Tuple2(3, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, 1),
+			_Utils_Tuple2(0, 1),
+			_Utils_Tuple2(1, 1),
+			_Utils_Tuple2(2, 1),
+			_Utils_Tuple2(3, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, 1),
+			_Utils_Tuple2(0, 2),
+			_Utils_Tuple2(1, 3),
+			_Utils_Tuple2(2, 4),
+			_Utils_Tuple2(3, 5)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, 2),
+			_Utils_Tuple2(0, 2),
+			_Utils_Tuple2(1, 2),
+			_Utils_Tuple2(2, 2),
+			_Utils_Tuple2(3, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, 3),
+			_Utils_Tuple2(0, 3),
+			_Utils_Tuple2(1, 3),
+			_Utils_Tuple2(2, 3),
+			_Utils_Tuple2(3, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(-1, 4),
+			_Utils_Tuple2(0, 4),
+			_Utils_Tuple2(1, 4),
+			_Utils_Tuple2(2, 4),
+			_Utils_Tuple2(3, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, -4),
+			_Utils_Tuple2(0, -3),
+			_Utils_Tuple2(0, -2),
+			_Utils_Tuple2(0, -1),
+			_Utils_Tuple2(0, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, -4),
+			_Utils_Tuple2(1, -3),
+			_Utils_Tuple2(2, -2),
+			_Utils_Tuple2(3, -1),
+			_Utils_Tuple2(4, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, -3),
+			_Utils_Tuple2(0, -2),
+			_Utils_Tuple2(0, -1),
+			_Utils_Tuple2(0, 0),
+			_Utils_Tuple2(0, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, -3),
+			_Utils_Tuple2(1, -2),
+			_Utils_Tuple2(2, -1),
+			_Utils_Tuple2(3, 0),
+			_Utils_Tuple2(4, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, -2),
+			_Utils_Tuple2(0, -1),
+			_Utils_Tuple2(0, 0),
+			_Utils_Tuple2(0, 1),
+			_Utils_Tuple2(0, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, -2),
+			_Utils_Tuple2(1, -1),
+			_Utils_Tuple2(2, 0),
+			_Utils_Tuple2(3, 1),
+			_Utils_Tuple2(4, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, -1),
+			_Utils_Tuple2(0, 0),
+			_Utils_Tuple2(0, 1),
+			_Utils_Tuple2(0, 2),
+			_Utils_Tuple2(0, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, -1),
+			_Utils_Tuple2(1, -1),
+			_Utils_Tuple2(2, -1),
+			_Utils_Tuple2(3, -1),
+			_Utils_Tuple2(4, -1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, -1),
+			_Utils_Tuple2(1, 0),
+			_Utils_Tuple2(2, 1),
+			_Utils_Tuple2(3, 2),
+			_Utils_Tuple2(4, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, 0),
+			_Utils_Tuple2(0, 1),
+			_Utils_Tuple2(0, 2),
+			_Utils_Tuple2(0, 3),
+			_Utils_Tuple2(0, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, 0),
+			_Utils_Tuple2(1, 0),
+			_Utils_Tuple2(2, 0),
+			_Utils_Tuple2(3, 0),
+			_Utils_Tuple2(4, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, 0),
+			_Utils_Tuple2(1, 1),
+			_Utils_Tuple2(2, 2),
+			_Utils_Tuple2(3, 3),
+			_Utils_Tuple2(4, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, 1),
+			_Utils_Tuple2(1, 1),
+			_Utils_Tuple2(2, 1),
+			_Utils_Tuple2(3, 1),
+			_Utils_Tuple2(4, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, 1),
+			_Utils_Tuple2(1, 2),
+			_Utils_Tuple2(2, 3),
+			_Utils_Tuple2(3, 4),
+			_Utils_Tuple2(4, 5)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, 2),
+			_Utils_Tuple2(1, 2),
+			_Utils_Tuple2(2, 2),
+			_Utils_Tuple2(3, 2),
+			_Utils_Tuple2(4, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, 3),
+			_Utils_Tuple2(1, 3),
+			_Utils_Tuple2(2, 3),
+			_Utils_Tuple2(3, 3),
+			_Utils_Tuple2(4, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(0, 4),
+			_Utils_Tuple2(1, 4),
+			_Utils_Tuple2(2, 4),
+			_Utils_Tuple2(3, 4),
+			_Utils_Tuple2(4, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(1, -4),
+			_Utils_Tuple2(1, -3),
+			_Utils_Tuple2(1, -2),
+			_Utils_Tuple2(1, -1),
+			_Utils_Tuple2(1, 0)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(1, -3),
+			_Utils_Tuple2(1, -2),
+			_Utils_Tuple2(1, -1),
+			_Utils_Tuple2(1, 0),
+			_Utils_Tuple2(1, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(1, -3),
+			_Utils_Tuple2(2, -2),
+			_Utils_Tuple2(3, -1),
+			_Utils_Tuple2(4, 0),
+			_Utils_Tuple2(5, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(1, -2),
+			_Utils_Tuple2(1, -1),
+			_Utils_Tuple2(1, 0),
+			_Utils_Tuple2(1, 1),
+			_Utils_Tuple2(1, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(1, -2),
+			_Utils_Tuple2(2, -1),
+			_Utils_Tuple2(3, 0),
+			_Utils_Tuple2(4, 1),
+			_Utils_Tuple2(5, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(1, -1),
+			_Utils_Tuple2(1, 0),
+			_Utils_Tuple2(1, 1),
+			_Utils_Tuple2(1, 2),
+			_Utils_Tuple2(1, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(1, -1),
+			_Utils_Tuple2(2, 0),
+			_Utils_Tuple2(3, 1),
+			_Utils_Tuple2(4, 2),
+			_Utils_Tuple2(5, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(1, 0),
+			_Utils_Tuple2(1, 1),
+			_Utils_Tuple2(1, 2),
+			_Utils_Tuple2(1, 3),
+			_Utils_Tuple2(1, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(1, 0),
+			_Utils_Tuple2(2, 1),
+			_Utils_Tuple2(3, 2),
+			_Utils_Tuple2(4, 3),
+			_Utils_Tuple2(5, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(1, 1),
+			_Utils_Tuple2(1, 2),
+			_Utils_Tuple2(1, 3),
+			_Utils_Tuple2(1, 4),
+			_Utils_Tuple2(1, 5)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(1, 1),
+			_Utils_Tuple2(2, 1),
+			_Utils_Tuple2(3, 1),
+			_Utils_Tuple2(4, 1),
+			_Utils_Tuple2(5, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(1, 2),
+			_Utils_Tuple2(2, 2),
+			_Utils_Tuple2(3, 2),
+			_Utils_Tuple2(4, 2),
+			_Utils_Tuple2(5, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(1, 3),
+			_Utils_Tuple2(2, 3),
+			_Utils_Tuple2(3, 3),
+			_Utils_Tuple2(4, 3),
+			_Utils_Tuple2(5, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(1, 4),
+			_Utils_Tuple2(2, 4),
+			_Utils_Tuple2(3, 4),
+			_Utils_Tuple2(4, 4),
+			_Utils_Tuple2(5, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(2, -3),
+			_Utils_Tuple2(2, -2),
+			_Utils_Tuple2(2, -1),
+			_Utils_Tuple2(2, 0),
+			_Utils_Tuple2(2, 1)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(2, -2),
+			_Utils_Tuple2(2, -1),
+			_Utils_Tuple2(2, 0),
+			_Utils_Tuple2(2, 1),
+			_Utils_Tuple2(2, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(2, -1),
+			_Utils_Tuple2(2, 0),
+			_Utils_Tuple2(2, 1),
+			_Utils_Tuple2(2, 2),
+			_Utils_Tuple2(2, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(2, 0),
+			_Utils_Tuple2(2, 1),
+			_Utils_Tuple2(2, 2),
+			_Utils_Tuple2(2, 3),
+			_Utils_Tuple2(2, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(2, 1),
+			_Utils_Tuple2(2, 2),
+			_Utils_Tuple2(2, 3),
+			_Utils_Tuple2(2, 4),
+			_Utils_Tuple2(2, 5)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(3, -2),
+			_Utils_Tuple2(3, -1),
+			_Utils_Tuple2(3, 0),
+			_Utils_Tuple2(3, 1),
+			_Utils_Tuple2(3, 2)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(3, -1),
+			_Utils_Tuple2(3, 0),
+			_Utils_Tuple2(3, 1),
+			_Utils_Tuple2(3, 2),
+			_Utils_Tuple2(3, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(3, 0),
+			_Utils_Tuple2(3, 1),
+			_Utils_Tuple2(3, 2),
+			_Utils_Tuple2(3, 3),
+			_Utils_Tuple2(3, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(3, 1),
+			_Utils_Tuple2(3, 2),
+			_Utils_Tuple2(3, 3),
+			_Utils_Tuple2(3, 4),
+			_Utils_Tuple2(3, 5)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(4, -1),
+			_Utils_Tuple2(4, 0),
+			_Utils_Tuple2(4, 1),
+			_Utils_Tuple2(4, 2),
+			_Utils_Tuple2(4, 3)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(4, 0),
+			_Utils_Tuple2(4, 1),
+			_Utils_Tuple2(4, 2),
+			_Utils_Tuple2(4, 3),
+			_Utils_Tuple2(4, 4)
+		]),
+		_List_fromArray(
+		[
+			_Utils_Tuple2(4, 1),
+			_Utils_Tuple2(4, 2),
+			_Utils_Tuple2(4, 3),
+			_Utils_Tuple2(4, 4),
+			_Utils_Tuple2(4, 5)
+		])
+	]);
+var $author$project$Helper$checkAllRows = F2(
+	function (boardData, player) {
+		var playerRows = A2(
+			$elm$core$List$filter,
+			function (l) {
+				return !$elm$core$List$isEmpty(l);
+			},
+			A2(
+				$elm$core$List$map,
+				A2($author$project$Helper$checkRow, boardData, player),
+				$author$project$Constants$possibleRows));
+		var rowMarkers = $elm$core$List$concat(playerRows);
+		var isIndependentRows = _Utils_eq(
+			$elm$core$List$length(
+				$elm$core$Set$toList(
+					$elm$core$Set$fromList(rowMarkers))),
+			$elm$core$List$length(rowMarkers));
+		var numRows = isIndependentRows ? $elm$core$List$length(playerRows) : 0;
+		return $elm$core$List$isEmpty(playerRows) ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(
+			_Utils_Tuple2(numRows, rowMarkers));
+	});
 var $author$project$Helper$isCollinear = F2(
 	function (_v0, _v1) {
 		var x1 = _v0.a;
@@ -5849,19 +6954,15 @@ var $author$project$Helper$moveOneStep = F2(
 		var xChange = $author$project$Helper$getSign(x2 - x1);
 		return _Utils_Tuple2(x1 + xChange, y1 + yChange);
 	});
-var $elm$core$Basics$not = _Basics_not;
-var $author$project$Constants$Both = {$: 'Both'};
 var $author$project$Constants$P2 = {$: 'P2'};
 var $author$project$Helper$otherP = function (p) {
-	switch (p.$) {
-		case 'P1':
-			return $author$project$Constants$P2;
-		case 'P2':
-			return $author$project$Constants$P1;
-		default:
-			return $author$project$Constants$Both;
+	if (p.$ === 'P1') {
+		return $author$project$Constants$P2;
+	} else {
+		return $author$project$Constants$P1;
 	}
 };
+var $elm$core$Debug$todo = _Debug_todo;
 var $author$project$Helper$flipPointsBetween = F3(
 	function (curP, newRingP, boardData) {
 		flipPointsBetween:
@@ -5870,8 +6971,8 @@ var $author$project$Helper$flipPointsBetween = F3(
 				return _Debug_todo(
 					'Helper',
 					{
-						start: {line: 49, column: 5},
-						end: {line: 49, column: 15}
+						start: {line: 75, column: 5},
+						end: {line: 75, column: 15}
 					})('flipPointsBetween - Should not reach here');
 			} else {
 				if (_Utils_eq(curP, newRingP)) {
@@ -5918,8 +7019,8 @@ var $author$project$Helper$flipPointsBetween = F3(
 					return _Debug_todo(
 						'Helper',
 						{
-							start: {line: 67, column: 9},
-							end: {line: 67, column: 19}
+							start: {line: 93, column: 9},
+							end: {line: 93, column: 19}
 						})('flipPointsBetween - Should not reach here');
 				}
 			}
@@ -5932,33 +7033,45 @@ var $author$project$Helper$isEmptyHex = F2(
 			curVState,
 			$elm$core$Maybe$Just($author$project$Constants$None));
 	});
-var $author$project$Helper$isPlayerRing = F3(
-	function (boardData, p, player) {
-		var curVState = A2($elm$core$Dict$get, p, boardData);
-		return _Utils_eq(player, $author$project$Constants$Both) ? (_Utils_eq(
-			curVState,
-			$elm$core$Maybe$Just(
-				$author$project$Constants$Ring($author$project$Constants$P1))) || _Utils_eq(
-			curVState,
-			$elm$core$Maybe$Just(
-				$author$project$Constants$Ring($author$project$Constants$P2)))) : _Utils_eq(
-			curVState,
-			$elm$core$Maybe$Just(
-				$author$project$Constants$Ring(player)));
+var $author$project$Helper$maybeMarker = F2(
+	function (boardData, p) {
+		var _v0 = A2($elm$core$Dict$get, p, boardData);
+		if ((_v0.$ === 'Just') && (_v0.a.$ === 'Marker')) {
+			var player = _v0.a.a;
+			return $elm$core$Maybe$Just(
+				$author$project$Constants$Marker(player));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
 	});
-var $author$project$Helper$isPlayerMarker = F3(
-	function (boardData, p, player) {
-		var curVState = A2($elm$core$Dict$get, p, boardData);
-		return _Utils_eq(player, $author$project$Constants$Both) ? (_Utils_eq(
-			curVState,
-			$elm$core$Maybe$Just(
-				$author$project$Constants$Marker($author$project$Constants$P1))) || _Utils_eq(
-			curVState,
-			$elm$core$Maybe$Just(
-				$author$project$Constants$Marker($author$project$Constants$P2)))) : _Utils_eq(
-			curVState,
-			$elm$core$Maybe$Just(
-				$author$project$Constants$Marker(player)));
+var $author$project$Helper$isMarker = F2(
+	function (boardData, p) {
+		var _v0 = A2($author$project$Helper$maybeMarker, boardData, p);
+		if (_v0.$ === 'Just') {
+			return true;
+		} else {
+			return false;
+		}
+	});
+var $author$project$Helper$maybeRing = F2(
+	function (boardData, p) {
+		var _v0 = A2($elm$core$Dict$get, p, boardData);
+		if ((_v0.$ === 'Just') && (_v0.a.$ === 'Ring')) {
+			var player = _v0.a.a;
+			return $elm$core$Maybe$Just(
+				$author$project$Constants$Ring(player));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $author$project$Helper$isRing = F2(
+	function (boardData, p) {
+		var _v0 = A2($author$project$Helper$maybeRing, boardData, p);
+		if (_v0.$ === 'Just') {
+			return true;
+		} else {
+			return false;
+		}
 	});
 var $author$project$Helper$checkPointsBetween = F4(
 	function (boardData, curP, prevRingP, visitedEmptySpace) {
@@ -5967,10 +7080,10 @@ var $author$project$Helper$checkPointsBetween = F4(
 			if (_Utils_eq(curP, prevRingP)) {
 				return true;
 			} else {
-				if (A3($author$project$Helper$isPlayerRing, boardData, curP, $author$project$Constants$Both)) {
+				if (A2($author$project$Helper$isRing, boardData, curP)) {
 					return false;
 				} else {
-					if (visitedEmptySpace && A3($author$project$Helper$isPlayerMarker, boardData, curP, $author$project$Constants$Both)) {
+					if (visitedEmptySpace && A2($author$project$Helper$isMarker, boardData, curP)) {
 						return false;
 					} else {
 						var updatedVisitEmpty = visitedEmptySpace || A2($author$project$Helper$isEmptyHex, boardData, curP);
@@ -5996,6 +7109,86 @@ var $author$project$Helper$isValidMove = F3(
 		return _Utils_eq(
 			curVState,
 			$elm$core$Maybe$Just($author$project$Constants$None)) && (A2($author$project$Helper$isCollinear, p, prevRingP) && A4($author$project$Helper$checkPointsBetween, boardData, newP, prevRingP, false));
+	});
+var $author$project$Helper$getValidMoves = F2(
+	function (boardData, p) {
+		return A2(
+			$elm$core$List$filter,
+			function (newP) {
+				return A3($author$project$Helper$isValidMove, boardData, newP, p);
+			},
+			$elm$core$Dict$keys(boardData));
+	});
+var $author$project$Helper$isMarkerPlayer = F3(
+	function (boardData, p, player) {
+		var _v0 = A2($author$project$Helper$maybeMarker, boardData, p);
+		if ((_v0.$ === 'Just') && (_v0.a.$ === 'Marker')) {
+			var mplayer = _v0.a.a;
+			return _Utils_eq(player, mplayer);
+		} else {
+			return false;
+		}
+	});
+var $author$project$Helper$isPlayerRing = F3(
+	function (boardData, p, player) {
+		var _v0 = A2($author$project$Helper$maybeRing, boardData, p);
+		if ((_v0.$ === 'Just') && (_v0.a.$ === 'Ring')) {
+			var rplayer = _v0.a.a;
+			return _Utils_eq(player, rplayer);
+		} else {
+			return false;
+		}
+	});
+var $elm$core$List$member = F2(
+	function (x, xs) {
+		return A2(
+			$elm$core$List$any,
+			function (a) {
+				return _Utils_eq(a, x);
+			},
+			xs);
+	});
+var $elm$core$List$sortBy = _List_sortBy;
+var $elm$core$List$sort = function (xs) {
+	return A2($elm$core$List$sortBy, $elm$core$Basics$identity, xs);
+};
+var $author$project$Helper$isValidRow = function (points) {
+	return A2(
+		$elm$core$List$member,
+		$elm$core$List$sort(points),
+		$author$project$Constants$possibleRows);
+};
+var $author$project$Helper$isWinner = function (_v0) {
+	var x = _v0.a;
+	var y = _v0.b;
+	return (x === 3) || (y === 3);
+};
+var $author$project$Helper$removeMarkers = F2(
+	function (boardData, pts) {
+		removeMarkers:
+		while (true) {
+			if (!pts.b) {
+				return boardData;
+			} else {
+				var pt = pts.a;
+				var rest = pts.b;
+				var $temp$boardData = A3($elm$core$Dict$insert, pt, $author$project$Constants$None, boardData),
+					$temp$pts = rest;
+				boardData = $temp$boardData;
+				pts = $temp$pts;
+				continue removeMarkers;
+			}
+		}
+	});
+var $author$project$Helper$updateScore = F2(
+	function (_v0, player) {
+		var x = _v0.a;
+		var y = _v0.b;
+		if (player.$ === 'P1') {
+			return _Utils_Tuple2(x + 1, y);
+		} else {
+			return _Utils_Tuple2(x, y + 1);
+		}
 	});
 var $author$project$Yinsh$update = F2(
 	function (msg, model) {
@@ -6040,14 +7233,20 @@ var $author$project$Yinsh$update = F2(
 						}
 					case 'SelectR':
 						var player = _v1.a;
-						return A3($author$project$Helper$isPlayerRing, model.boardData, pt, player) ? _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									gameState: $author$project$Yinsh$Confirm(player),
-									selectMouseHex: model.mouseHex
-								}),
-							$elm$core$Platform$Cmd$none) : _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						if (A3($author$project$Helper$isPlayerRing, model.boardData, pt, player)) {
+							var newValidMoves = A2($author$project$Helper$getValidMoves, model.boardData, pt);
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										gameState: $author$project$Yinsh$Confirm(player),
+										selectMouseHex: model.mouseHex,
+										validMoves: newValidMoves
+									}),
+								$elm$core$Platform$Cmd$none);
+						} else {
+							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						}
 					case 'Confirm':
 						var player = _v1.a;
 						if (A3($author$project$Helper$isValidMove, model.boardData, pt, model.selectMouseHex)) {
@@ -6067,11 +7266,42 @@ var $author$project$Yinsh$update = F2(
 										pt,
 										$author$project$Constants$Ring(player),
 										model.boardData)));
-							return _Utils_Tuple2(
-								_Utils_update(
-									model,
-									{boardData: newBoardData, gameState: newGState}),
-								$elm$core$Platform$Cmd$none);
+							var _v2 = A2($author$project$Helper$checkAllRows, newBoardData, player);
+							if (_v2.$ === 'Just') {
+								if (!_v2.a.a) {
+									var _v3 = _v2.a;
+									var points = _v3.b;
+									return _Utils_Tuple2(
+										_Utils_update(
+											model,
+											{
+												boardData: newBoardData,
+												gameState: $author$project$Yinsh$RemoveM(player),
+												possibleRemoveMarkers: points,
+												toBeRemovedMarkers: _List_Nil
+											}),
+										$elm$core$Platform$Cmd$none);
+								} else {
+									var _v4 = _v2.a;
+									var numRings = _v4.a;
+									var points = _v4.b;
+									return _Utils_Tuple2(
+										_Utils_update(
+											model,
+											{
+												boardData: newBoardData,
+												gameState: A2($author$project$Yinsh$RemoveR, player, numRings),
+												toBeRemovedMarkers: points
+											}),
+										$elm$core$Platform$Cmd$none);
+								}
+							} else {
+								return _Utils_Tuple2(
+									_Utils_update(
+										model,
+										{boardData: newBoardData, gameState: newGState}),
+									$elm$core$Platform$Cmd$none);
+							}
 						} else {
 							return _Utils_Tuple2(
 								_Utils_update(
@@ -6082,27 +7312,208 @@ var $author$project$Yinsh$update = F2(
 									}),
 								$elm$core$Platform$Cmd$none);
 						}
+					case 'RemoveM':
+						var player = _v1.a;
+						if (A3($author$project$Helper$isMarkerPlayer, model.boardData, pt, player) && (!A2($elm$core$List$member, pt, model.toBeRemovedMarkers))) {
+							var newRemovedMarkers = A2($elm$core$List$cons, pt, model.toBeRemovedMarkers);
+							var fiveSelected = 5 === $elm$core$List$length(newRemovedMarkers);
+							return (!fiveSelected) ? _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{toBeRemovedMarkers: newRemovedMarkers}),
+								$elm$core$Platform$Cmd$none) : ($author$project$Helper$isValidRow(newRemovedMarkers) ? _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										gameState: A2($author$project$Yinsh$RemoveR, player, 1),
+										toBeRemovedMarkers: newRemovedMarkers
+									}),
+								$elm$core$Platform$Cmd$none) : _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{toBeRemovedMarkers: _List_Nil}),
+								$elm$core$Platform$Cmd$none));
+						} else {
+							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						}
+					case 'RemoveR':
+						var player = _v1.a;
+						var numRings = _v1.b;
+						if (A3($author$project$Helper$isPlayerRing, model.boardData, pt, player)) {
+							if (numRings === 1) {
+								var otherPlayer = $author$project$Helper$otherP(player);
+								var newScore = A2($author$project$Helper$updateScore, model.score, player);
+								var newBoardData = A3(
+									$elm$core$Dict$insert,
+									pt,
+									$author$project$Constants$None,
+									A2($author$project$Helper$removeMarkers, model.boardData, model.toBeRemovedMarkers));
+								if ($author$project$Helper$isWinner(newScore)) {
+									return _Utils_Tuple2(
+										_Utils_update(
+											model,
+											{
+												boardData: newBoardData,
+												gameState: $author$project$Yinsh$Win(player),
+												score: newScore
+											}),
+										$elm$core$Platform$Cmd$none);
+								} else {
+									var _v5 = A2($author$project$Helper$checkAllRows, newBoardData, player);
+									if (_v5.$ === 'Just') {
+										if (!_v5.a.a) {
+											var _v6 = _v5.a;
+											var points = _v6.b;
+											return _Utils_Tuple2(
+												_Utils_update(
+													model,
+													{
+														boardData: newBoardData,
+														gameState: $author$project$Yinsh$RemoveM(player),
+														possibleRemoveMarkers: points,
+														score: newScore,
+														toBeRemovedMarkers: _List_Nil
+													}),
+												$elm$core$Platform$Cmd$none);
+										} else {
+											var _v7 = _v5.a;
+											var newNumRings = _v7.a;
+											var points = _v7.b;
+											return _Utils_Tuple2(
+												_Utils_update(
+													model,
+													{
+														boardData: newBoardData,
+														gameState: A2($author$project$Yinsh$RemoveR, player, newNumRings),
+														score: newScore,
+														toBeRemovedMarkers: points
+													}),
+												$elm$core$Platform$Cmd$none);
+										}
+									} else {
+										var _v8 = A2($author$project$Helper$checkAllRows, newBoardData, otherPlayer);
+										if (_v8.$ === 'Just') {
+											if (!_v8.a.a) {
+												var _v9 = _v8.a;
+												var points = _v9.b;
+												return _Utils_Tuple2(
+													_Utils_update(
+														model,
+														{
+															boardData: newBoardData,
+															gameState: $author$project$Yinsh$RemoveM(otherPlayer),
+															possibleRemoveMarkers: points,
+															score: newScore,
+															toBeRemovedMarkers: _List_Nil
+														}),
+													$elm$core$Platform$Cmd$none);
+											} else {
+												var _v10 = _v8.a;
+												var otherPNumRings = _v10.a;
+												var points = _v10.b;
+												return _Utils_Tuple2(
+													_Utils_update(
+														model,
+														{
+															boardData: newBoardData,
+															gameState: A2($author$project$Yinsh$RemoveR, otherPlayer, otherPNumRings),
+															score: newScore,
+															toBeRemovedMarkers: points
+														}),
+													$elm$core$Platform$Cmd$none);
+											}
+										} else {
+											return _Utils_Tuple2(
+												_Utils_update(
+													model,
+													{
+														boardData: newBoardData,
+														gameState: $author$project$Yinsh$SelectR(otherPlayer),
+														score: newScore
+													}),
+												$elm$core$Platform$Cmd$none);
+										}
+									}
+								}
+							} else {
+								var newScore = A2($author$project$Helper$updateScore, model.score, player);
+								var newGState = $author$project$Helper$isWinner(newScore) ? $author$project$Yinsh$Win(player) : A2($author$project$Yinsh$RemoveR, player, numRings - 1);
+								var newBoardData = A3($elm$core$Dict$insert, pt, $author$project$Constants$None, model.boardData);
+								return _Utils_Tuple2(
+									_Utils_update(
+										model,
+										{boardData: newBoardData, gameState: newGState, score: newScore}),
+									$elm$core$Platform$Cmd$none);
+							}
+						} else {
+							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						}
 					default:
-						return _Debug_todo(
-							'Yinsh',
-							{
-								start: {line: 143, column: 14},
-								end: {line: 143, column: 24}
-							})('Need to determine other cases for mouse click');
+						var player = _v1.a;
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 		}
 	});
-var $timjs$elm_collage$Collage$Core$Circle = function (a) {
-	return {$: 'Circle', a: a};
-};
-var $timjs$elm_collage$Collage$circle = $timjs$elm_collage$Collage$Core$Circle;
-var $timjs$elm_collage$Collage$Flat = {$: 'Flat'};
-var $timjs$elm_collage$Collage$Sharp = {$: 'Sharp'};
 var $avh4$elm_color$Color$RgbaSpace = F4(
 	function (a, b, c, d) {
 		return {$: 'RgbaSpace', a: a, b: b, c: c, d: d};
 	});
 var $avh4$elm_color$Color$black = A4($avh4$elm_color$Color$RgbaSpace, 0 / 255, 0 / 255, 0 / 255, 1.0);
+var $author$project$Constants$blackenColor = $avh4$elm_color$Color$black;
+var $timjs$elm_collage$Collage$Core$Circle = function (a) {
+	return {$: 'Circle', a: a};
+};
+var $timjs$elm_collage$Collage$circle = $timjs$elm_collage$Collage$Core$Circle;
+var $author$project$Constants$hex2pix = function (_v0) {
+	var x = _v0.a;
+	var y = _v0.b;
+	var cart_y = ($author$project$Constants$unit_x.b * x) + ($author$project$Constants$unit_y.b * y);
+	var cart_x = ($author$project$Constants$unit_x.a * x) + ($author$project$Constants$unit_y.a * y);
+	return _Utils_Tuple2(cart_x, cart_y);
+};
+var $timjs$elm_collage$Collage$Core$Shape = F2(
+	function (a, b) {
+		return {$: 'Shape', a: a, b: b};
+	});
+var $timjs$elm_collage$Collage$Core$collage = function (basic) {
+	return {
+		basic: basic,
+		handlers: _List_Nil,
+		name: $elm$core$Maybe$Nothing,
+		opacity: 1,
+		rotation: 0,
+		scale: _Utils_Tuple2(1, 1),
+		shift: _Utils_Tuple2(0, 0)
+	};
+};
+var $timjs$elm_collage$Collage$styled = function (style) {
+	return A2(
+		$elm$core$Basics$composeL,
+		$timjs$elm_collage$Collage$Core$collage,
+		$timjs$elm_collage$Collage$Core$Shape(style));
+};
+var $timjs$elm_collage$Collage$Core$Transparent = {$: 'Transparent'};
+var $timjs$elm_collage$Collage$transparent = $timjs$elm_collage$Collage$Core$Transparent;
+var $timjs$elm_collage$Collage$outlined = function (linestyle) {
+	return $timjs$elm_collage$Collage$styled(
+		_Utils_Tuple2($timjs$elm_collage$Collage$transparent, linestyle));
+};
+var $author$project$Constants$ring_size = 0.36 * $author$project$Constants$side;
+var $timjs$elm_collage$Collage$shift = F2(
+	function (_v0, collage) {
+		var dx = _v0.a;
+		var dy = _v0.b;
+		var _v1 = collage.shift;
+		var x = _v1.a;
+		var y = _v1.b;
+		return _Utils_update(
+			collage,
+			{
+				shift: _Utils_Tuple2(x + dx, y + dy)
+			});
+	});
+var $timjs$elm_collage$Collage$Flat = {$: 'Flat'};
+var $timjs$elm_collage$Collage$Sharp = {$: 'Sharp'};
 var $timjs$elm_collage$Collage$thin = 2.0;
 var $timjs$elm_collage$Collage$Core$Uniform = function (a) {
 	return {$: 'Uniform', a: a};
@@ -6123,93 +7534,46 @@ var $timjs$elm_collage$Collage$broken = F3(
 			{dashPattern: dashes, fill: fill, thickness: thickness});
 	});
 var $timjs$elm_collage$Collage$solid = $timjs$elm_collage$Collage$broken(_List_Nil);
-var $timjs$elm_collage$Collage$Core$Transparent = {$: 'Transparent'};
-var $timjs$elm_collage$Collage$transparent = $timjs$elm_collage$Collage$Core$Transparent;
-var $timjs$elm_collage$Collage$invisible = A2($timjs$elm_collage$Collage$solid, 0, $timjs$elm_collage$Collage$transparent);
-var $timjs$elm_collage$Collage$Core$Shape = F2(
-	function (a, b) {
-		return {$: 'Shape', a: a, b: b};
-	});
-var $timjs$elm_collage$Collage$Core$collage = function (basic) {
-	return {
-		basic: basic,
-		handlers: _List_Nil,
-		name: $elm$core$Maybe$Nothing,
-		opacity: 1,
-		rotation: 0,
-		scale: _Utils_Tuple2(1, 1),
-		shift: _Utils_Tuple2(0, 0)
-	};
-};
-var $elm$core$Basics$composeL = F3(
-	function (g, f, x) {
-		return g(
-			f(x));
-	});
-var $timjs$elm_collage$Collage$styled = function (style) {
+var $timjs$elm_collage$Collage$thick = 4.0;
+var $author$project$Yinsh$blackenRing = function (p) {
 	return A2(
-		$elm$core$Basics$composeL,
-		$timjs$elm_collage$Collage$Core$collage,
-		$timjs$elm_collage$Collage$Core$Shape(style));
+		$timjs$elm_collage$Collage$shift,
+		$author$project$Constants$hex2pix(p),
+		A2(
+			$timjs$elm_collage$Collage$outlined,
+			A2(
+				$timjs$elm_collage$Collage$solid,
+				$timjs$elm_collage$Collage$thick,
+				$timjs$elm_collage$Collage$uniform($author$project$Constants$blackenColor)),
+			$timjs$elm_collage$Collage$circle($author$project$Constants$ring_size)));
 };
+var $timjs$elm_collage$Collage$invisible = A2($timjs$elm_collage$Collage$solid, 0, $timjs$elm_collage$Collage$transparent);
 var $timjs$elm_collage$Collage$filled = function (fill) {
 	return $timjs$elm_collage$Collage$styled(
 		_Utils_Tuple2(fill, $timjs$elm_collage$Collage$invisible));
 };
-var $author$project$Constants$hex2pix = function (_v0) {
-	var x = _v0.a;
-	var y = _v0.b;
-	var cart_y = ($author$project$Constants$unit_x.b * x) + ($author$project$Constants$unit_y.b * y);
-	var cart_x = ($author$project$Constants$unit_x.a * x) + ($author$project$Constants$unit_y.a * y);
-	return _Utils_Tuple2(cart_x, cart_y);
-};
-var $author$project$Constants$ring_size = 0.36 * $author$project$Constants$side;
 var $author$project$Constants$marker_size = 0.6 * $author$project$Constants$ring_size;
 var $avh4$elm_color$Color$red = A4($avh4$elm_color$Color$RgbaSpace, 204 / 255, 0 / 255, 0 / 255, 1.0);
 var $author$project$Constants$p1Color = $avh4$elm_color$Color$red;
 var $avh4$elm_color$Color$green = A4($avh4$elm_color$Color$RgbaSpace, 115 / 255, 210 / 255, 22 / 255, 1.0);
 var $author$project$Constants$p2Color = $avh4$elm_color$Color$green;
-var $timjs$elm_collage$Collage$shift = F2(
-	function (_v0, collage) {
-		var dx = _v0.a;
-		var dy = _v0.b;
-		var _v1 = collage.shift;
-		var x = _v1.a;
-		var y = _v1.b;
-		return _Utils_update(
-			collage,
-			{
-				shift: _Utils_Tuple2(x + dx, y + dy)
-			});
-	});
 var $author$project$Yinsh$drawMarker = F2(
 	function (p, player) {
 		var markerColor = _Utils_eq(player, $author$project$Constants$P1) ? $author$project$Constants$p1Color : $author$project$Constants$p2Color;
-		var _v0 = $author$project$Constants$hex2pix(p);
-		var cx = _v0.a;
-		var cy = _v0.b;
 		return A2(
 			$timjs$elm_collage$Collage$shift,
-			_Utils_Tuple2(cx, cy),
+			$author$project$Constants$hex2pix(p),
 			A2(
 				$timjs$elm_collage$Collage$filled,
 				$timjs$elm_collage$Collage$uniform(markerColor),
 				$timjs$elm_collage$Collage$circle($author$project$Constants$marker_size)));
 	});
-var $timjs$elm_collage$Collage$outlined = function (linestyle) {
-	return $timjs$elm_collage$Collage$styled(
-		_Utils_Tuple2($timjs$elm_collage$Collage$transparent, linestyle));
-};
-var $timjs$elm_collage$Collage$thick = 4.0;
 var $author$project$Yinsh$drawRing = F2(
 	function (p, player) {
 		var ringColor = _Utils_eq(player, $author$project$Constants$P1) ? $author$project$Constants$p1Color : $author$project$Constants$p2Color;
-		var _v0 = $author$project$Constants$hex2pix(p);
-		var cx = _v0.a;
-		var cy = _v0.b;
 		return A2(
 			$timjs$elm_collage$Collage$shift,
-			_Utils_Tuple2(cx, cy),
+			$author$project$Constants$hex2pix(p),
 			A2(
 				$timjs$elm_collage$Collage$outlined,
 				A2(
@@ -6222,6 +7586,51 @@ var $timjs$elm_collage$Collage$Core$Group = function (a) {
 	return {$: 'Group', a: a};
 };
 var $timjs$elm_collage$Collage$group = A2($elm$core$Basics$composeL, $timjs$elm_collage$Collage$Core$collage, $timjs$elm_collage$Collage$Core$Group);
+var $author$project$Yinsh$blackenMarker = function (p) {
+	return A2(
+		$timjs$elm_collage$Collage$shift,
+		$author$project$Constants$hex2pix(p),
+		A2(
+			$timjs$elm_collage$Collage$filled,
+			$timjs$elm_collage$Collage$uniform($author$project$Constants$blackenColor),
+			$timjs$elm_collage$Collage$circle($author$project$Constants$marker_size)));
+};
+var $author$project$Yinsh$renderBlackenMarkers = function (ps) {
+	return $timjs$elm_collage$Collage$group(
+		A2($elm$core$List$map, $author$project$Yinsh$blackenMarker, ps));
+};
+var $author$project$Constants$dotColor = $avh4$elm_color$Color$black;
+var $author$project$Constants$dot_size = 0.6 * $author$project$Constants$marker_size;
+var $author$project$Yinsh$drawDot = function (p) {
+	return A2(
+		$timjs$elm_collage$Collage$shift,
+		$author$project$Constants$hex2pix(p),
+		A2(
+			$timjs$elm_collage$Collage$filled,
+			$timjs$elm_collage$Collage$uniform($author$project$Constants$dotColor),
+			$timjs$elm_collage$Collage$circle($author$project$Constants$dot_size)));
+};
+var $author$project$Yinsh$renderDots = function (ps) {
+	return $timjs$elm_collage$Collage$group(
+		A2($elm$core$List$map, $author$project$Yinsh$drawDot, ps));
+};
+var $author$project$Constants$highlightColor = $avh4$elm_color$Color$black;
+var $author$project$Yinsh$highlightMarker = function (p) {
+	return A2(
+		$timjs$elm_collage$Collage$shift,
+		$author$project$Constants$hex2pix(p),
+		A2(
+			$timjs$elm_collage$Collage$outlined,
+			A2(
+				$timjs$elm_collage$Collage$solid,
+				$timjs$elm_collage$Collage$thick,
+				$timjs$elm_collage$Collage$uniform($author$project$Constants$highlightColor)),
+			$timjs$elm_collage$Collage$circle($author$project$Constants$marker_size)));
+};
+var $author$project$Yinsh$renderHighlighting = function (ps) {
+	return $timjs$elm_collage$Collage$group(
+		A2($elm$core$List$map, $author$project$Yinsh$highlightMarker, ps));
+};
 var $author$project$Yinsh$addFloatingElems = F2(
 	function (model, canvas) {
 		var _v0 = model.gameState;
@@ -6244,27 +7653,70 @@ var $author$project$Yinsh$addFloatingElems = F2(
 						])) : canvas;
 			case 'Confirm':
 				var player = _v0.a;
+				var dots = $author$project$Yinsh$renderDots(model.validMoves);
 				var canvasWithMarker = $timjs$elm_collage$Collage$group(
 					_List_fromArray(
 						[
+							dots,
 							A2($author$project$Yinsh$drawMarker, model.selectMouseHex, player),
 							canvas
 						]));
-				return A2($author$project$Helper$isEmptyHex, model.boardData, model.mouseHex) ? $timjs$elm_collage$Collage$group(
+				return A3($author$project$Helper$isValidMove, model.boardData, model.mouseHex, model.selectMouseHex) ? $timjs$elm_collage$Collage$group(
 					_List_fromArray(
 						[
 							A2($author$project$Yinsh$drawRing, model.mouseHex, player),
 							canvasWithMarker
 						])) : canvasWithMarker;
+			case 'RemoveM':
+				var player = _v0.a;
+				return $timjs$elm_collage$Collage$group(
+					_List_fromArray(
+						[
+							$author$project$Yinsh$renderHighlighting(model.possibleRemoveMarkers),
+							$author$project$Yinsh$renderBlackenMarkers(model.toBeRemovedMarkers),
+							canvas
+						]));
+			case 'RemoveR':
+				var player = _v0.a;
+				return A3($author$project$Helper$isPlayerRing, model.boardData, model.mouseHex, player) ? $timjs$elm_collage$Collage$group(
+					_List_fromArray(
+						[
+							$author$project$Yinsh$blackenRing(model.mouseHex),
+							$author$project$Yinsh$renderBlackenMarkers(model.toBeRemovedMarkers),
+							canvas
+						])) : $timjs$elm_collage$Collage$group(
+					_List_fromArray(
+						[
+							$author$project$Yinsh$renderBlackenMarkers(model.toBeRemovedMarkers),
+							canvas
+						]));
 			default:
-				return _Debug_todo(
-					'Yinsh',
-					{
-						start: {line: 233, column: 10},
-						end: {line: 233, column: 20}
-					})('ADD FLOATING ELEMS FOR OTHER STATES!');
+				var player = _v0.a;
+				return canvas;
 		}
 	});
+var $elm$html$Html$h3 = _VirtualDom_node('h3');
+var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $author$project$Yinsh$declareWinner = function (player) {
+	if (player.$ === 'P1') {
+		return A2(
+			$elm$html$Html$h3,
+			_List_Nil,
+			_List_fromArray(
+				[
+					$elm$html$Html$text('Player 1 won!!')
+				]));
+	} else {
+		return A2(
+			$elm$html$Html$h3,
+			_List_Nil,
+			_List_fromArray(
+				[
+					$elm$html$Html$text('Player 2 won!!')
+				]));
+	}
+};
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $author$project$Constants$edges = _List_fromArray(
 	[
@@ -7006,17 +8458,6 @@ var $author$project$Yinsh$renderBoard = function (edges_coords) {
 		_List_fromArray(
 			[border, edges]));
 };
-var $elm$core$List$filter = F2(
-	function (isGood, list) {
-		return A3(
-			$elm$core$List$foldr,
-			F2(
-				function (x, xs) {
-					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
-				}),
-			_List_Nil,
-			list);
-	});
 var $elm$core$Basics$neq = _Utils_notEqual;
 var $author$project$Yinsh$renderPiece = function (_v0) {
 	var p = _v0.a;
@@ -7032,8 +8473,8 @@ var $author$project$Yinsh$renderPiece = function (_v0) {
 			return _Debug_todo(
 				'Yinsh',
 				{
-					start: {line: 201, column: 17},
-					end: {line: 201, column: 27}
+					start: {line: 317, column: 17},
+					end: {line: 317, column: 27}
 				})('renderPiece - should not reach here');
 	}
 };
@@ -7050,6 +8491,37 @@ var $author$project$Yinsh$renderPieces = function (boardData) {
 					return !_Utils_eq(state, $author$project$Constants$None);
 				},
 				$elm$core$Dict$toList(boardData))));
+};
+var $elm$core$Basics$ge = _Utils_ge;
+var $author$project$Yinsh$scoreRing = F3(
+	function (player, num, colored) {
+		var ringColor = (!colored) ? $author$project$Constants$boardColor : (_Utils_eq(player, $author$project$Constants$P1) ? $author$project$Constants$p1Color : $author$project$Constants$p2Color);
+		var floatNum = num;
+		var position = _Utils_eq(player, $author$project$Constants$P1) ? _Utils_Tuple2(((-5) * $author$project$Constants$side) + ((7.8 - (2.2 * floatNum)) * $author$project$Constants$ring_size), ((-5) * $author$project$Constants$side) + (1.2 * $author$project$Constants$ring_size)) : _Utils_Tuple2((5 * $author$project$Constants$side) - ((7.8 - (2.2 * floatNum)) * $author$project$Constants$ring_size), (5 * $author$project$Constants$side) - (1.2 * $author$project$Constants$ring_size));
+		return A2(
+			$timjs$elm_collage$Collage$shift,
+			position,
+			A2(
+				$timjs$elm_collage$Collage$outlined,
+				A2(
+					$timjs$elm_collage$Collage$solid,
+					$timjs$elm_collage$Collage$thick,
+					$timjs$elm_collage$Collage$uniform(ringColor)),
+				$timjs$elm_collage$Collage$circle($author$project$Constants$ring_size)));
+	});
+var $author$project$Yinsh$renderScore = function (_v0) {
+	var x = _v0.a;
+	var y = _v0.b;
+	return $timjs$elm_collage$Collage$group(
+		_List_fromArray(
+			[
+				A3($author$project$Yinsh$scoreRing, $author$project$Constants$P1, 1, x >= 1),
+				A3($author$project$Yinsh$scoreRing, $author$project$Constants$P1, 2, x >= 2),
+				A3($author$project$Yinsh$scoreRing, $author$project$Constants$P1, 3, x >= 3),
+				A3($author$project$Yinsh$scoreRing, $author$project$Constants$P2, 1, y >= 1),
+				A3($author$project$Yinsh$scoreRing, $author$project$Constants$P2, 2, y >= 2),
+				A3($author$project$Yinsh$scoreRing, $author$project$Constants$P2, 3, y >= 3)
+			]));
 };
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
@@ -7103,17 +8575,6 @@ var $elm$core$Basics$composeR = F3(
 		return g(
 			f(x));
 	});
-var $elm$core$List$append = F2(
-	function (xs, ys) {
-		if (!ys.b) {
-			return xs;
-		} else {
-			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
-		}
-	});
-var $elm$core$List$concat = function (lists) {
-	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
-};
 var $timjs$elm_collage$Collage$Layout$handlePoints = function (thickness) {
 	var thicken = function (_v0) {
 		var x = _v0.a;
@@ -7696,7 +9157,6 @@ var $elm$svg$Svg$Attributes$r = _VirtualDom_attribute('r');
 var $elm$svg$Svg$rect = $elm$svg$Svg$trustedNode('rect');
 var $elm$svg$Svg$Attributes$rx = _VirtualDom_attribute('rx');
 var $elm$svg$Svg$Attributes$ry = _VirtualDom_attribute('ry');
-var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var $elm$svg$Svg$text = $elm$virtual_dom$VirtualDom$text;
 var $elm$svg$Svg$text_ = $elm$svg$Svg$trustedNode('text');
 var $elm$svg$Svg$Attributes$xlinkHref = function (value) {
@@ -7961,6 +9421,7 @@ var $author$project$Yinsh$view = function (model) {
 			_Utils_Tuple2('left', '50%'),
 			_Utils_Tuple2('transform', 'translate(-50%, -50%)')
 		]);
+	var score = $author$project$Yinsh$renderScore(model.score);
 	var pieces = $author$project$Yinsh$renderPieces(model.boardData);
 	var board = $author$project$Yinsh$renderBoard($author$project$Constants$edges_coords);
 	var game = A2(
@@ -7968,21 +9429,41 @@ var $author$project$Yinsh$view = function (model) {
 		model,
 		$timjs$elm_collage$Collage$group(
 			_List_fromArray(
-				[pieces, board])));
-	return A2(
-		$elm$html$Html$div,
-		A2(
-			$elm$core$List$map,
-			function (_v0) {
-				var k = _v0.a;
-				var v = _v0.b;
-				return A2($elm$html$Html$Attributes$style, k, v);
-			},
-			styles),
-		_List_fromArray(
-			[
-				$timjs$elm_collage$Collage$Render$svg(game)
-			]));
+				[pieces, score, board])));
+	var _v0 = model.gameState;
+	if (_v0.$ === 'Win') {
+		var player = _v0.a;
+		return A2(
+			$elm$html$Html$div,
+			A2(
+				$elm$core$List$map,
+				function (_v1) {
+					var k = _v1.a;
+					var v = _v1.b;
+					return A2($elm$html$Html$Attributes$style, k, v);
+				},
+				styles),
+			_List_fromArray(
+				[
+					$timjs$elm_collage$Collage$Render$svg(game),
+					$author$project$Yinsh$declareWinner(player)
+				]));
+	} else {
+		return A2(
+			$elm$html$Html$div,
+			A2(
+				$elm$core$List$map,
+				function (_v2) {
+					var k = _v2.a;
+					var v = _v2.b;
+					return A2($elm$html$Html$Attributes$style, k, v);
+				},
+				styles),
+			_List_fromArray(
+				[
+					$timjs$elm_collage$Collage$Render$svg(game)
+				]));
+	}
 };
 var $author$project$Yinsh$main = $elm$browser$Browser$element(
 	{init: $author$project$Yinsh$init, subscriptions: $author$project$Yinsh$subscriptions, update: $author$project$Yinsh$update, view: $author$project$Yinsh$view});

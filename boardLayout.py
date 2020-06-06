@@ -1,5 +1,6 @@
 import itertools
 import math
+import numpy as np
 
 side = 50
 # -30 degrees and +90 degrees for x and y axial unit vectors
@@ -52,8 +53,25 @@ def get_int_edges(axial_vertices):
             int_edges.append((v1, v2))
     return int_edges
 
+def get_points_between(p1, p2):
+    points = [p1]
+    while p1 != p2:
+        p1 = (p1[0] + np.sign(p2[0]-p1[0]), p1[1] + np.sign(p2[1]-p1[1]))
+        points.append(p1)
+    return points
+
+def get_five_in_a_row(axial_vertices):
+    five_in_a_row = []
+    for p1, p2 in itertools.combinations(axial_vertices, 2):
+        x_dif = p1[0] - p2[0]
+        y_dif = p1[1] - p2[1]
+        if (abs(x_dif) == 4 and y_dif == 0) or (x_dif == 0 and abs(y_dif) == 4) or (x_dif == y_dif and abs(x_dif) == 4):
+            five_in_a_row.append(get_points_between(p1, p2))
+    return five_in_a_row
+
 if __name__=="__main__":
     axial_vertices = get_axial_vertices()
     cart_vertices = get_cartesian_vertices(axial_vertices)
     edges = get_edges(cart_vertices)
     int_edges = get_int_edges(axial_vertices)
+    five_in_a_row = get_five_in_a_row(axial_vertices)
