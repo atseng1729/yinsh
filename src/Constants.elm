@@ -21,6 +21,8 @@ type alias Row = {player: Player,
 
 -- Length of a side in pixels
 side = 50
+borderLength = 10 * side
+
 p1Color = Color.red
 p2Color = Color.green
 boardColor = Color.grey

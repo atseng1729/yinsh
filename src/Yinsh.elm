@@ -7,6 +7,7 @@ import Browser.Events as E
 import Json.Decode as D
 
 import Html exposing (..)
+import Html.Events as Events
 import Html.Attributes as Attr
 import Debug
 import Time
@@ -15,6 +16,7 @@ import Dict exposing (Dict)
 import Collage exposing (..)
 import Collage.Layout exposing (stack)
 import Collage.Render exposing (svg)
+import Collage.Events as CE 
 
 import Constants exposing (..)
 import Helper exposing (..)
@@ -42,8 +44,6 @@ type alias Model =
   { boardData : Dict IntPoint VState
   , gameState : GState
   , score : (Int, Int)
-  , windowWidth : Float
-  , windowHeight : Float
   , mouseHex : IntPoint     -- Hex coordinates of mouse, use this!
   , selectMouseHex : IntPoint -- Hex coordinates of mouse in last state, used for confirm + other stuff maybe in future
   , p1Rings : Int          -- Current Number of Red Rings on Board
@@ -54,12 +54,10 @@ type alias Model =
   }
 
 type alias Flags =
-  { windowWidth : Int
-  , windowHeight : Int
+  { 
   }
 
-type Msg = WindowResize Int Int |
-           MouseMoved IntPoint |
+type Msg = MouseMoved IntPoint |
            MouseClick IntPoint
 
 initModel : Flags -> Model
@@ -67,8 +65,6 @@ initModel flags =
   { boardData = emptyBoard
   , gameState = PlaceR P1
   , score = (0, 0)
-  , windowWidth = toFloat flags.windowWidth
-  , windowHeight = toFloat flags.windowHeight
   , mouseHex = (0, 0)
   , selectMouseHex = (0, 0)
   , p1Rings = 0
@@ -96,18 +92,14 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
   -- Add code to differentiate behavior in different states! TODO
   Sub.batch [
-    E.onResize WindowResize,
     -- map : (a -> value) -> Decoder a -> Decoder value. remove later but helpful now
-    E.onMouseMove (decodeMouse model False),
-    E.onMouseDown (decodeMouse model True)
+    -- E.onMouseMove (decodeMouse model False),
+    -- E.onMouseDown (decodeMouse model True)
   ]
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    -- WindowResize has carries two ints next to it.
-
-    WindowResize x y -> ({model | windowWidth = toFloat x, windowHeight = toFloat y}, Cmd.none)
 
     MouseMoved pt ->
       ({model | mouseHex = pt}, Cmd.none)
@@ -209,21 +201,23 @@ update msg model =
 -- see https://github.com/elm/browser/blob/1.0.2/examples/src/Drag.elm for example of decoder interaction
 
 -- Decoder for json -> Msg that contains x, y coords of mouse from JSON
-decodeMouse : Model -> Bool -> D.Decoder Msg
-decodeMouse model isClick =
+
+decodeMouse : Bool -> D.Decoder Msg
+decodeMouse isClick =
   let
-    decode_coords = D.map2 (\x y -> (x,y)) (D.field "clientX" D.float) (D.field "clientY" D.float)
-    p = D.map (mouseInputToHex model) decode_coords
+    decode_coords = D.map2 (\x y -> (x,y)) (D.field "offsetX" D.float) (D.field "offsetY" D.float)
+    p = D.map (mouseInputToHex) decode_coords
     msg_type = if isClick then MouseClick else MouseMoved
   in
     (D.map msg_type p)
 
+
 --------------------------
 -- Converts x,y from javascript to IntPoint
 -- Center at middle of canvas and then invert y-axis
-mouseInputToHex : Model -> Point -> IntPoint
-mouseInputToHex model (mx, my) =
-  (mx - model.windowWidth/2, model.windowHeight/2 - my) |> pix2hex
+mouseInputToHex : Point -> IntPoint
+mouseInputToHex (mx, my) =
+  (mx - borderLength/2, borderLength/2 - my) |> pix2hex
 
 -- Renders a single ring at the given hex coordinates
 drawRing : IntPoint -> Player -> Collage Msg
@@ -377,13 +371,24 @@ view model =
     score = renderScore model.score
     pieces = renderPieces model.boardData
     game = addFloatingElems model <| group [pieces, score, board] -- order important since we want pieces on top of board
+
     styles =
       [ ("position", "fixed")
       , ("top", "50%")
       , ("left", "50%")
       , ("transform", "translate(-50%, -50%)")
       ]
+    -- Encoded into List (Attribute Msg) format
+    attr_styles = (List.map (\(k, v) -> Attr.style k v) styles)
+
+    -- Mouse listeners; only attach to the game
+    mListeners : List (Attribute Msg)
+    mListeners = 
+      [
+          Events.on "mousemove" (decodeMouse False)
+        , Events.on "mousedown" (decodeMouse True)
+      ]
   in
     case model.gameState of
-      Win player -> div (List.map (\(k, v) -> Attr.style k v) styles) [svg game, declareWinner player]
-      _          -> div (List.map (\(k, v) -> Attr.style k v) styles) [svg game]
+      Win player -> div attr_styles [svg game, declareWinner player]
+      _          -> div (attr_styles ++ mListeners) [svg game]
