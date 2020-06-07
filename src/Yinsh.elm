@@ -177,7 +177,7 @@ update msg model =
                   ({model | gameState = Win player, boardData = newBoardData, score = newScore}, Cmd.none)
                 else -- check if opponent had any rows formed
                   case checkAllRows newBoardData player of
-                    Just (0, points) ->
+                    Just (0, points) -> -- Multiple non-independent rings
                       ({model | gameState = RemoveM player, boardData = newBoardData, possibleRemoveMarkers = points, score = newScore, toBeRemovedMarkers = []}, Cmd.none)
                     Just (newNumRings, points) ->
                       ({model | gameState = RemoveR player newNumRings, boardData = newBoardData, toBeRemovedMarkers = points, score = newScore}, Cmd.none)
@@ -189,7 +189,7 @@ update msg model =
                           ({model | gameState = RemoveR otherPlayer otherPNumRings, boardData = newBoardData, toBeRemovedMarkers = points, score = newScore}, Cmd.none)
                         Nothing ->
                           ({model | gameState = SelectR otherPlayer, boardData = newBoardData, score = newScore}, Cmd.none)
-            else
+            else -- more than 1 ring to be removed, recursively check 
               let
                 newScore = updateScore model.score player
                 newGState = if isWinner newScore then Win player else RemoveR player (numRings - 1)
