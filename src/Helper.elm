@@ -134,6 +134,7 @@ getValidMoves : Dict IntPoint VState -> IntPoint -> List IntPoint
 getValidMoves boardData p =
   List.filter (\newP -> isValidMove boardData newP p) (Dict.keys boardData)
 
+-- very inefficient, but seldomly called
 isValidRow : List IntPoint -> Bool
 isValidRow points =
   List.member (List.sort points) possibleRows

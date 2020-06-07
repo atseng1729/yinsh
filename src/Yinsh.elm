@@ -60,8 +60,7 @@ type alias Flags =
 type Msg = MouseMoved IntPoint |
            MouseClick IntPoint
 
-initModel : Flags -> Model
-initModel flags =
+emptyModel = 
   { boardData = emptyBoard
   , gameState = PlaceR P1
   , score = (0, 0)
@@ -73,6 +72,12 @@ initModel flags =
   , possibleRemoveMarkers = []
   , toBeRemovedMarkers = []
   }
+
+-- Move the central green ring to generate 2 red rows, one of which is a 7 in a row and the other a 6
+debugModel = { boardData = Dict.fromList [((-5,-4),Ring P2),((-5,-3),None),((-5,-2),None),((-5,-1),None),((-4,-5),Ring P1),((-4,-4),Marker P2),((-4,-3),Marker P2),((-4,-2),None),((-4,-1),None),((-4,0),None),((-4,1),Ring P2),((-3,-5),Ring P2),((-3,-4),Ring P1),((-3,-3),Marker P1),((-3,-2),None),((-3,-1),None),((-3,0),None),((-3,1),Marker P1),((-3,2),None),((-2,-5),Ring P2),((-2,-4),Marker P1),((-2,-3),Ring P1),((-2,-2),Marker P1),((-2,-1),None),((-2,0),None),((-2,1),Marker P1),((-2,2),Marker P1),((-2,3),None),((-1,-5),Ring P1),((-1,-4),Marker P2),((-1,-3),None),((-1,-2),None),((-1,-1),None),((-1,0),None),((-1,1),Marker P1),((-1,2),Marker P1),((-1,3),None),((-1,4),None),((0,-4),None),((0,-3),Marker P2),((0,-2),None),((0,-1),None),((0,0),Ring P2),((0,1),Marker P1),((0,2),Marker P1),((0,3),None),((0,4),None),((1,-4),None),((1,-3),None),((1,-2),None),((1,-1),None),((1,0),Marker P1),((1,1),Marker P2),((1,2),Marker P1),((1,3),None),((1,4),None),((1,5),None),((2,-3),None),((2,-2),None),((2,-1),None),((2,0),Marker P1),((2,1),Marker P1),((2,2),Marker P2),((2,3),None),((2,4),None),((2,5),None),((3,-2),None),((3,-1),None),((3,0),Marker P2),((3,1),Marker P2),((3,2),Marker P1),((3,3),Marker P2),((3,4),None),((3,5),None),((4,-1),None),((4,0),Ring P1),((4,1),Marker P1),((4,2),Marker P1),((4,3),Marker P1),((4,4),None),((4,5),None),((5,1),None),((5,2),None),((5,3),None),((5,4),None)], gameState = SelectR P2, mouseHex = (4,0), p1Rings = 5, p2Rings = 5, possibleRemoveMarkers = [], score = (0,0), selectMouseHex = (4,1), toBeRemovedMarkers = [], validMoves = [(2,-1),(4,-1),(4,0),(4,4),(5,1),(5,2)] }
+
+initModel : Flags -> Model
+initModel flags = emptyModel
 
 -- Given model, color, and change,
 changeRings : Model -> Player -> Int -> Model
@@ -141,7 +146,7 @@ update msg model =
                 Just (numRings, points) ->
                   ({model | gameState = RemoveR player numRings, boardData = newBoardData, toBeRemovedMarkers = points}, Cmd.none)
                 Nothing ->
-                  ({model | gameState = newGState, boardData = newBoardData}, Cmd.none)
+                  (Debug.log "" {model | gameState = newGState, boardData = newBoardData}, Cmd.none)
           else -- if click on invalid point, then transition back to select phase
             ({model | gameState = SelectR player, selectMouseHex = model.mouseHex},
               Cmd.none)
