@@ -16,7 +16,7 @@ import Dict exposing (Dict)
 import Collage exposing (..)
 import Collage.Layout exposing (stack)
 import Collage.Render exposing (svg)
-import Collage.Events as CE 
+import Collage.Events as CE
 
 import Constants exposing (..)
 import Helper exposing (..)
@@ -29,7 +29,7 @@ import Helper exposing (..)
 -- Win -> Display win message
 -- True/False to toggle which side is moving
 -- Colors: R, G
-type GState = PlaceR Player | SelectR Player | Confirm Player | RemoveM Player | RemoveR Player Int | Win Player
+type GState = PlaceR Player | SelectR Player | Confirm Player | RemoveM Player Player | RemoveR Player Player Int | Win Player
 
 main : Program Flags Model Msg
 main =
@@ -54,13 +54,13 @@ type alias Model =
   }
 
 type alias Flags =
-  { 
+  {
   }
 
 type Msg = MouseMoved IntPoint |
            MouseClick IntPoint
 
-emptyModel = 
+emptyModel =
   { boardData = emptyBoard
   , gameState = PlaceR P1
   , score = (0, 0)
@@ -102,10 +102,28 @@ subscriptions model =
     -- E.onMouseDown (decodeMouse model True)
   ]
 
+processRowWrapper : Model -> Dict IntPoint VState -> Player -> Player -> (Int, Int) -> (Model, Cmd Msg)
+processRowWrapper model newBoardData player prevPlayer newScore =
+  let
+    otherPlayer = otherP player
+  in
+    case checkAllRows newBoardData player of
+      Just (0, points) -> -- Multiple non-independent rings
+        ({model | gameState = RemoveM player prevPlayer, boardData = newBoardData, possibleRemoveMarkers = points, score = newScore, toBeRemovedMarkers = []}, Cmd.none)
+      Just (newNumRings, points) ->
+        ({model | gameState = RemoveR player prevPlayer newNumRings, boardData = newBoardData, toBeRemovedMarkers = points, score = newScore}, Cmd.none)
+      Nothing ->
+        case checkAllRows newBoardData otherPlayer of
+          Just (0, points) ->
+            ({model | gameState = RemoveM otherPlayer prevPlayer, boardData = newBoardData, possibleRemoveMarkers = points, score = newScore, toBeRemovedMarkers = []}, Cmd.none)
+          Just (otherPNumRings, points) ->
+            ({model | gameState = RemoveR otherPlayer prevPlayer otherPNumRings, boardData = newBoardData, toBeRemovedMarkers = points, score = newScore}, Cmd.none)
+          Nothing ->
+            ({model | gameState = SelectR (otherP prevPlayer), boardData = newBoardData, score = newScore}, Cmd.none)
+
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-
     MouseMoved pt ->
       ({model | mouseHex = pt}, Cmd.none)
 
@@ -140,17 +158,11 @@ update msg model =
                 |> Dict.insert model.selectMouseHex (Marker player)
                 |> flipPointsBetween curP pt
             in
-              case checkAllRows newBoardData player of
-                Just (0, points) ->
-                  ({model | gameState = RemoveM player, boardData = newBoardData, possibleRemoveMarkers = points, toBeRemovedMarkers = []}, Cmd.none)
-                Just (numRings, points) ->
-                  ({model | gameState = RemoveR player numRings, boardData = newBoardData, toBeRemovedMarkers = points}, Cmd.none)
-                Nothing ->
-                  (Debug.log "" {model | gameState = newGState, boardData = newBoardData}, Cmd.none)
+              processRowWrapper model newBoardData player player model.score
           else -- if click on invalid point, then transition back to select phase
             ({model | gameState = SelectR player, selectMouseHex = model.mouseHex},
               Cmd.none)
-        RemoveM player ->
+        RemoveM player prevPlayer ->
           if (isMarkerPlayer model.boardData pt player) && not (List.member pt model.toBeRemovedMarkers) then
             let
               newRemovedMarkers = pt::model.toBeRemovedMarkers
@@ -159,12 +171,12 @@ update msg model =
               if not fiveSelected then
                 ({model | toBeRemovedMarkers = newRemovedMarkers}, Cmd.none)
               else if isValidRow newRemovedMarkers then
-                ({model | gameState = RemoveR player 1, toBeRemovedMarkers = newRemovedMarkers}, Cmd.none)
+                ({model | gameState = RemoveR player prevPlayer 1, toBeRemovedMarkers = newRemovedMarkers}, Cmd.none)
               else
                 ({model | toBeRemovedMarkers = []}, Cmd.none)
           else
             (model, Cmd.none)
-        RemoveR player numRings ->
+        RemoveR player prevPlayer numRings ->
           if isPlayerRing model.boardData pt player then
             if numRings == 1 then
               let
@@ -176,23 +188,11 @@ update msg model =
                 if isWinner newScore then
                   ({model | gameState = Win player, boardData = newBoardData, score = newScore}, Cmd.none)
                 else -- check if opponent had any rows formed
-                  case checkAllRows newBoardData player of
-                    Just (0, points) -> -- Multiple non-independent rings
-                      ({model | gameState = RemoveM player, boardData = newBoardData, possibleRemoveMarkers = points, score = newScore, toBeRemovedMarkers = []}, Cmd.none)
-                    Just (newNumRings, points) ->
-                      ({model | gameState = RemoveR player newNumRings, boardData = newBoardData, toBeRemovedMarkers = points, score = newScore}, Cmd.none)
-                    Nothing ->
-                      case checkAllRows newBoardData otherPlayer of
-                        Just (0, points) ->
-                          ({model | gameState = RemoveM otherPlayer, boardData = newBoardData, possibleRemoveMarkers = points, score = newScore, toBeRemovedMarkers = []}, Cmd.none)
-                        Just (otherPNumRings, points) ->
-                          ({model | gameState = RemoveR otherPlayer otherPNumRings, boardData = newBoardData, toBeRemovedMarkers = points, score = newScore}, Cmd.none)
-                        Nothing ->
-                          ({model | gameState = SelectR otherPlayer, boardData = newBoardData, score = newScore}, Cmd.none)
-            else -- more than 1 ring to be removed, recursively check 
+                  processRowWrapper model newBoardData player prevPlayer newScore
+            else
               let
                 newScore = updateScore model.score player
-                newGState = if isWinner newScore then Win player else RemoveR player (numRings - 1)
+                newGState = if isWinner newScore then Win player else RemoveR player prevPlayer (numRings - 1)
                 newBoardData = model.boardData
                   |> Dict.insert pt None
               in
@@ -358,9 +358,12 @@ addFloatingElems model canvas =
         if (isValidMove model.boardData model.mouseHex model.selectMouseHex) then
           group [drawRing model.mouseHex player, canvasWithMarker]
         else canvasWithMarker
-    RemoveM player ->
-      group [renderHighlighting model.possibleRemoveMarkers, renderBlackenMarkers model.toBeRemovedMarkers, canvas]
-    RemoveR player _ ->
+    RemoveM player _ ->
+      if isMarkerPlayer model.boardData model.mouseHex player then
+        group [renderHighlighting model.possibleRemoveMarkers, renderBlackenMarkers (model.mouseHex :: model.toBeRemovedMarkers), canvas]
+      else
+        group [renderHighlighting model.possibleRemoveMarkers, renderBlackenMarkers model.toBeRemovedMarkers, canvas]
+    RemoveR player _ _ ->
       if isPlayerRing model.boardData model.mouseHex player then
         group [blackenRing model.mouseHex, renderBlackenMarkers model.toBeRemovedMarkers, canvas]
       else
@@ -388,7 +391,7 @@ view model =
 
     -- Mouse listeners; only attach to the game
     mListeners : List (Attribute Msg)
-    mListeners = 
+    mListeners =
       [
           Events.on "mousemove" (decodeMouse False)
         , Events.on "mousedown" (decodeMouse True)
