@@ -7279,7 +7279,7 @@ var $author$project$Yinsh$addFloatingElems = F2(
 						])) : canvasWithMarker;
 			case 'RemoveM':
 				var player = _v0.a;
-				return A3($author$project$Helper$isMarkerPlayer, model.boardData, model.mouseHex, player) ? $timjs$elm_collage$Collage$group(
+				return A2($elm$core$List$member, model.mouseHex, model.possibleRemoveMarkers) ? $timjs$elm_collage$Collage$group(
 					_List_fromArray(
 						[
 							$author$project$Yinsh$renderHighlighting(model.possibleRemoveMarkers),

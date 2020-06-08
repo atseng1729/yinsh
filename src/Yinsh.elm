@@ -359,7 +359,7 @@ addFloatingElems model canvas =
           group [drawRing model.mouseHex player, canvasWithMarker]
         else canvasWithMarker
     RemoveM player _ ->
-      if isMarkerPlayer model.boardData model.mouseHex player then
+      if List.member model.mouseHex model.possibleRemoveMarkers then
         group [renderHighlighting model.possibleRemoveMarkers, renderBlackenMarkers (model.mouseHex :: model.toBeRemovedMarkers), canvas]
       else
         group [renderHighlighting model.possibleRemoveMarkers, renderBlackenMarkers model.toBeRemovedMarkers, canvas]
