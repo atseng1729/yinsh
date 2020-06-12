@@ -109,17 +109,32 @@ processRowWrapper model newBoardData player prevPlayer newScore =
   in
     case checkAllRows newBoardData player of
       Just (0, points) -> -- Multiple non-independent rings
-        ({model | gameState = RemoveM player prevPlayer, boardData = newBoardData, possibleRemoveMarkers = points, score = newScore, toBeRemovedMarkers = []}, Cmd.none)
+        ({model | gameState = RemoveM player prevPlayer, 
+                  boardData = newBoardData, possibleRemoveMarkers = points, 
+                  score = newScore, toBeRemovedMarkers = []}, 
+                  Cmd.none)
       Just (newNumRings, points) ->
-        ({model | gameState = RemoveR player prevPlayer newNumRings, boardData = newBoardData, toBeRemovedMarkers = points, score = newScore}, Cmd.none)
+        ({model | gameState = RemoveR player prevPlayer newNumRings, 
+                  boardData = newBoardData, toBeRemovedMarkers = points, 
+                  score = newScore}, Cmd.none)
       Nothing ->
         case checkAllRows newBoardData otherPlayer of
           Just (0, points) ->
-            ({model | gameState = RemoveM otherPlayer prevPlayer, boardData = newBoardData, possibleRemoveMarkers = points, score = newScore, toBeRemovedMarkers = []}, Cmd.none)
+            ({model | gameState = RemoveM otherPlayer prevPlayer, 
+                      boardData = newBoardData, possibleRemoveMarkers = points, 
+                      score = newScore, toBeRemovedMarkers = []}
+                      ,Cmd.none)
           Just (otherPNumRings, points) ->
-            ({model | gameState = RemoveR otherPlayer prevPlayer otherPNumRings, boardData = newBoardData, toBeRemovedMarkers = points, score = newScore}, Cmd.none)
+            ({model | gameState = RemoveR otherPlayer prevPlayer otherPNumRings, 
+                      boardData = newBoardData, toBeRemovedMarkers = points, score = newScore}
+                      ,Cmd.none)
           Nothing ->
-            ({model | gameState = SelectR (otherP prevPlayer), boardData = newBoardData, score = newScore}, Cmd.none)
+            ({model | gameState = SelectR (otherP prevPlayer), boardData = newBoardData, score = newScore}
+                      ,Cmd.none)
+
+-- Big master function basically translates the rules manual of Yinsh 
+-- into code. Many of the checks are to handle edge cases and for
+-- smooth UI interaction.
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -133,7 +148,8 @@ update msg model =
           if isEmptyHex model.boardData pt then
             let
               other = otherP player
-              -- So that when there are 9 rings on the board, the appropriate state change will be triggered after placing the 10th
+              -- So that when there are 9 rings on the board, 
+              -- the appropriate state change will be triggered after placing the 10th
               newGState = if (model.p1Rings + model.p2Rings) < 9 then PlaceR other else SelectR other
               newBoardData = Dict.insert pt (Ring player) model.boardData
               newModel = {model | boardData = newBoardData, gameState = newGState}
@@ -144,9 +160,12 @@ update msg model =
         SelectR player ->
           if isPlayerRing model.boardData pt player then -- Process the new valid moves for display in confirm
             let newValidMoves = getValidMoves model.boardData pt
-            in ({model | gameState = Confirm player, selectMouseHex = model.mouseHex, validMoves = newValidMoves}, Cmd.none)
+            in ({model | gameState = Confirm player, 
+                selectMouseHex = model.mouseHex, validMoves = newValidMoves},
+                Cmd.none)
           else
             (model, Cmd.none)
+
         Confirm player ->
           if isValidMove model.boardData pt model.selectMouseHex then
             let
@@ -162,6 +181,7 @@ update msg model =
           else -- if click on invalid point, then transition back to select phase
             ({model | gameState = SelectR player, selectMouseHex = model.mouseHex},
               Cmd.none)
+
         RemoveM player prevPlayer ->
           if (List.member pt model.possibleRemoveMarkers) && not (List.member pt model.toBeRemovedMarkers) then
             let
@@ -176,6 +196,7 @@ update msg model =
                 ({model | toBeRemovedMarkers = []}, Cmd.none)
           else
             (model, Cmd.none)
+
         RemoveR player prevPlayer numRings ->
           if isPlayerRing model.boardData pt player then
             if numRings == 1 then
@@ -192,7 +213,8 @@ update msg model =
             else
               let
                 newScore = updateScore model.score player
-                newGState = if isWinner newScore then Win player else RemoveR player prevPlayer (numRings - 1)
+                newGState = if isWinner newScore then Win player 
+                            else RemoveR player prevPlayer (numRings - 1)
                 newBoardData = model.boardData
                   |> Dict.insert pt None
               in
@@ -204,7 +226,6 @@ update msg model =
 
 --------------------------
 -- see https://github.com/elm/browser/blob/1.0.2/examples/src/Drag.elm for example of decoder interaction
-
 -- Decoder for json -> Msg that contains x, y coords of mouse from JSON
 
 decodeMouse : Bool -> D.Decoder Msg
@@ -216,7 +237,6 @@ decodeMouse isClick =
   in
     (D.map msg_type p)
 
-
 --------------------------
 -- Converts x,y from javascript to IntPoint
 -- Center at middle of canvas and then invert y-axis
@@ -224,7 +244,18 @@ mouseInputToHex : Point -> IntPoint
 mouseInputToHex (mx, my) =
   (mx - borderLength/2, borderLength/2 - my) |> pix2hex
 
+-- Extract current player; useful for visualizing whose turn it is via thicker rings
+getPlayer : GState -> Player
+getPlayer state = case state of
+  PlaceR p -> p
+  SelectR p -> p 
+  Confirm p -> p 
+  RemoveM p1 p2 -> p1
+  RemoveR p1 p2 n -> p1
+  Win p -> p
+
 -- Renders a single ring at the given hex coordinates
+-- Makes the rings slightly thicker for the player that should move!
 drawRing : IntPoint -> Player -> Collage Msg
 drawRing p player =
   let
@@ -240,6 +271,8 @@ blackenRing p =
     |> outlined (solid thick (uniform blackenColor))
     |> shift (hex2pix p)
 
+-- Renders the rings in the score; starts from the corner (-5 * side)
+-- And moves by multiples of 2.2 ring_radiuses instead of 2 for better aesthetic appeal
 scoreRing : Player -> Int -> Bool -> Collage Msg
 scoreRing player num colored =
   let
@@ -269,6 +302,16 @@ drawDot p =
   circle dot_size
     |> filled (uniform dotColor)
     |> shift (hex2pix p)
+
+-- Draw ring and marker in the upper left corner corresponding to corresponding player's turn
+drawTurnRing : GState -> Collage Msg 
+drawTurnRing g = 
+  let color = case getPlayer g of 
+                P1 -> p1Color
+                P2 -> p2Color 
+  in 
+    circle (4.6*side)
+    |> outlined (solid thin (uniform color))
 
 highlightMarker : IntPoint -> Collage Msg
 highlightMarker p =
@@ -320,10 +363,12 @@ renderDots : List (IntPoint) -> Collage Msg
 renderDots ps =
   group <| List.map drawDot ps
 
+-- Used to highlight markers during marker selection for removal (>5 markers case)
 renderHighlighting : List (IntPoint) -> Collage Msg
 renderHighlighting ps =
   group <| List.map highlightMarker ps
 
+-- Renders already selected markers during RemoveM state
 renderBlackenMarkers : List (IntPoint) -> Collage Msg
 renderBlackenMarkers ps =
   group <| List.map blackenMarker ps
@@ -360,12 +405,16 @@ addFloatingElems model canvas =
         else canvasWithMarker
     RemoveM player _ ->
       if List.member model.mouseHex model.possibleRemoveMarkers then
-        group [renderHighlighting model.possibleRemoveMarkers, renderBlackenMarkers (model.mouseHex :: model.toBeRemovedMarkers), canvas]
+        group [renderHighlighting model.possibleRemoveMarkers, 
+              renderBlackenMarkers (model.mouseHex :: model.toBeRemovedMarkers), 
+              canvas]
       else
-        group [renderHighlighting model.possibleRemoveMarkers, renderBlackenMarkers model.toBeRemovedMarkers, canvas]
+        group [renderHighlighting model.possibleRemoveMarkers, 
+              renderBlackenMarkers model.toBeRemovedMarkers, canvas]
     RemoveR player _ _ ->
       if isPlayerRing model.boardData model.mouseHex player then
-        group [blackenRing model.mouseHex, renderBlackenMarkers model.toBeRemovedMarkers, canvas]
+        group [blackenRing model.mouseHex, 
+              renderBlackenMarkers model.toBeRemovedMarkers, canvas]
       else
         group [renderBlackenMarkers model.toBeRemovedMarkers, canvas]
     Win player ->
@@ -378,7 +427,8 @@ view model =
     board = renderBoard edges_coords
     score = renderScore model.score
     pieces = renderPieces model.boardData
-    game = addFloatingElems model <| group [pieces, score, board] -- order important since we want pieces on top of board
+    turnRing = drawTurnRing model.gameState
+    game = addFloatingElems model <| group [pieces, score, board, turnRing] -- order important since we want pieces on top of board
 
     styles =
       [ ("position", "fixed")

@@ -7055,7 +7055,7 @@ var $elm$core$Tuple$second = function (_v0) {
 var $elm$core$Basics$cos = _Basics_cos;
 var $elm$core$Basics$pi = _Basics_pi;
 var $author$project$Constants$radian_x = ((-1) * $elm$core$Basics$pi) / 6;
-var $author$project$Constants$side = 50;
+var $author$project$Constants$side = 60;
 var $elm$core$Basics$sin = _Basics_sin;
 var $author$project$Constants$unit_x = _Utils_Tuple2(
 	$author$project$Constants$side * $elm$core$Basics$cos($author$project$Constants$radian_x),
@@ -7153,10 +7153,22 @@ var $timjs$elm_collage$Collage$filled = function (fill) {
 		_Utils_Tuple2(fill, $timjs$elm_collage$Collage$invisible));
 };
 var $author$project$Constants$marker_size = 0.6 * $author$project$Constants$ring_size;
-var $avh4$elm_color$Color$red = A4($avh4$elm_color$Color$RgbaSpace, 204 / 255, 0 / 255, 0 / 255, 1.0);
-var $author$project$Constants$p1Color = $avh4$elm_color$Color$red;
-var $avh4$elm_color$Color$green = A4($avh4$elm_color$Color$RgbaSpace, 115 / 255, 210 / 255, 22 / 255, 1.0);
-var $author$project$Constants$p2Color = $avh4$elm_color$Color$green;
+var $avh4$elm_color$Color$scaleFrom255 = function (c) {
+	return c / 255;
+};
+var $avh4$elm_color$Color$rgb255 = F3(
+	function (r, g, b) {
+		return A4(
+			$avh4$elm_color$Color$RgbaSpace,
+			$avh4$elm_color$Color$scaleFrom255(r),
+			$avh4$elm_color$Color$scaleFrom255(g),
+			$avh4$elm_color$Color$scaleFrom255(b),
+			1.0);
+	});
+var $author$project$Constants$elm_blue = A3($avh4$elm_color$Color$rgb255, 96, 181, 204);
+var $author$project$Constants$p1Color = $author$project$Constants$elm_blue;
+var $author$project$Constants$elm_green = A3($avh4$elm_color$Color$rgb255, 127, 209, 59);
+var $author$project$Constants$p2Color = $author$project$Constants$elm_green;
 var $author$project$Yinsh$drawMarker = F2(
 	function (p, player) {
 		var markerColor = _Utils_eq(player, $author$project$Constants$P1) ? $author$project$Constants$p1Color : $author$project$Constants$p2Color;
@@ -7363,6 +7375,48 @@ var $author$project$Yinsh$decodeMouse = function (isClick) {
 	return A2($elm$json$Json$Decode$map, msg_type, p);
 };
 var $elm$html$Html$div = _VirtualDom_node('div');
+var $author$project$Yinsh$getPlayer = function (state) {
+	switch (state.$) {
+		case 'PlaceR':
+			var p = state.a;
+			return p;
+		case 'SelectR':
+			var p = state.a;
+			return p;
+		case 'Confirm':
+			var p = state.a;
+			return p;
+		case 'RemoveM':
+			var p1 = state.a;
+			var p2 = state.b;
+			return p1;
+		case 'RemoveR':
+			var p1 = state.a;
+			var p2 = state.b;
+			var n = state.c;
+			return p1;
+		default:
+			var p = state.a;
+			return p;
+	}
+};
+var $author$project$Yinsh$drawTurnRing = function (g) {
+	var color = function () {
+		var _v0 = $author$project$Yinsh$getPlayer(g);
+		if (_v0.$ === 'P1') {
+			return $author$project$Constants$p1Color;
+		} else {
+			return $author$project$Constants$p2Color;
+		}
+	}();
+	return A2(
+		$timjs$elm_collage$Collage$outlined,
+		A2(
+			$timjs$elm_collage$Collage$solid,
+			$timjs$elm_collage$Collage$thin,
+			$timjs$elm_collage$Collage$uniform(color)),
+		$timjs$elm_collage$Collage$circle(4.6 * $author$project$Constants$side));
+};
 var $author$project$Constants$edges = _List_fromArray(
 	[
 		_Utils_Tuple2(
@@ -8053,8 +8107,8 @@ var $elm$html$Html$Events$on = F2(
 			event,
 			$elm$virtual_dom$VirtualDom$Normal(decoder));
 	});
-var $avh4$elm_color$Color$grey = A4($avh4$elm_color$Color$RgbaSpace, 211 / 255, 215 / 255, 207 / 255, 1.0);
-var $author$project$Constants$boardColor = $avh4$elm_color$Color$grey;
+var $avh4$elm_color$Color$darkGrey = A4($avh4$elm_color$Color$RgbaSpace, 186 / 255, 189 / 255, 182 / 255, 1.0);
+var $author$project$Constants$boardColor = $avh4$elm_color$Color$darkGrey;
 var $author$project$Constants$borderColor = $avh4$elm_color$Color$black;
 var $timjs$elm_collage$Collage$Core$Polyline = function (a) {
 	return {$: 'Polyline', a: a};
@@ -8129,8 +8183,8 @@ var $author$project$Yinsh$renderPiece = function (_v0) {
 			return _Debug_todo(
 				'Yinsh',
 				{
-					start: {line: 316, column: 17},
-					end: {line: 316, column: 27}
+					start: {line: 356, column: 17},
+					end: {line: 356, column: 27}
 				})('renderPiece - should not reach here');
 	}
 };
@@ -9059,6 +9113,7 @@ var $timjs$elm_collage$Collage$Render$svg = function (collage) {
 		A2($timjs$elm_collage$Collage$Layout$align, $timjs$elm_collage$Collage$Layout$topLeft, collage));
 };
 var $author$project$Yinsh$view = function (model) {
+	var turnRing = $author$project$Yinsh$drawTurnRing(model.gameState);
 	var styles = _List_fromArray(
 		[
 			_Utils_Tuple2('position', 'fixed'),
@@ -9085,7 +9140,7 @@ var $author$project$Yinsh$view = function (model) {
 		model,
 		$timjs$elm_collage$Collage$group(
 			_List_fromArray(
-				[pieces, score, board])));
+				[pieces, score, board, turnRing])));
 	var attr_styles = A2(
 		$elm$core$List$map,
 		function (_v1) {

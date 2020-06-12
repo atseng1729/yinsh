@@ -2,17 +2,68 @@
 <head>
   <meta charset="UTF-8">
   <title>Main</title>
+  
+  <style>
+  /* Elm colors */
+  body {
+    background-color: white
+  }
+
+  .top {
+    margin: auto;
+    font-size: 100px;
+    color: black;
+    border: 4px solid black;
+    border-radius: 15px 50px;
+    background-color: #5a6378;
+  }
+
+  #titleDiv {
+    position: absolute;
+    vertical-align: middle;
+    height: 100px;
+    transform: translate(-50%, -50%);
+    top: 5%;
+    left: 50%;
+  }
+
+  #rules {
+    font-size: 40;
+    color: black;
+    background-color: #60b5cc;
+    /* Need this for inline elements like link to center them */
+    display:block;
+    border-radius: 50px 15px;
+    border: 4px solid black;
+    text-align: center;
+  }
+
+  #rules:hover {
+    background-color: #f0ad00;
+  }
+
+
+  </style>
   <script src="yinsh.js"></script>
 </head>
 
 <body>
-  <div id="yinsh"></div>
+  
+  <div id = titleDiv>
+    <h class = "top"> ⓎⒾⓃⓈⒽ</h>
+    <br> 
+    <a href = https://www.boardspace.net/yinsh/english/rules.htm id = "rules"> Ⓡⓤⓛⓔⓢ </a>
+  </div>
+
+  <div id="yinsh"> </div>
+
   <script>
-  var app = Elm.Yinsh.init({
-    node: document.getElementById('yinsh'),
-    flags: {windowWidth: window.innerWidth,
-	    windowHeight: window.innerHeight}
-  });
+    var app = Elm.Yinsh.init({
+      node: document.getElementById('yinsh'),
+      flags: {windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight}
+    });
   </script>
+
 </body>
 </html>

@@ -20,12 +20,16 @@ type alias Row = {player: Player,
                   end: IntPoint}
 
 -- Length of a side in pixels
-side = 50
+side = 60
 borderLength = 10 * side
 
-p1Color = Color.red
-p2Color = Color.green
-boardColor = Color.grey
+-- Elm colors 
+elm_green = Color.rgb255 127 209 59
+elm_blue = Color.rgb255 96 181 204
+
+p1Color = elm_blue -- Color.red
+p2Color = elm_green -- Color.green
+boardColor = Color.darkGrey
 borderColor = Color.black
 highlightColor = Color.black
 blackenColor = Color.black

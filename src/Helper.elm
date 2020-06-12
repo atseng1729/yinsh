@@ -5,7 +5,6 @@ import Set exposing (Set)
 
 import Constants exposing (..)
 
--- TODO: change name to isEmptyHex
 isEmptyHex : Dict IntPoint VState -> IntPoint -> Bool
 isEmptyHex boardData p =
   let
