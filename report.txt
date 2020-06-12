@@ -1,0 +1,27 @@
+﻿Yinsh Game Summary:
+
+Live version: https://atseng1729.github.io/yinsh/
+
+The rules of the game are found at https://www.boardspace.net/yinsh/english/rules.htm. The basic goal is to form rows of 5 with markers which are placed down upon ring moves, and rings can move in straight lines when not blocked by other rings or more than 1 row of markers. When a ring jumps over markers, those markers are flipped. When 5 collinear markers of the same color are formed, that player can remove those markers and a ring and score a point.
+
+Our inspiration was a Haskell version of Yinsh found at https://github.com/sharkdp/yinsh. We thought this game had interesting rules and could not find any other online implementations. We wanted a 2-player version since the above implementation is only 1 player and vs. AI. Furthermore, Arthur vetoed Jiedong’s chess idea, and Jiedong agreed that Yinsh had less “busywork” than chess since both of us already knew chess pretty well but not this game.
+
+We initially planned out the data structures for the game. We decided to use an axial coordinate system to represent our hexagonal grid which greatly simplified colinearity calculations (https://www.redblobgames.com/grids/hexagons/ was a very helpful reference). We identified different states the game could be in, like placing rings (PlaceR), selecting rings (SelectR), Confirming a ring move (Confirm), selecting a marker for removal (with extra data attached to handle edge cases), confirming a ring removal, and winning. We tag each game state with either P1 or P2.
+
+We converted all cartesian coordinates to internal hexagonal coordinates for easier game logic. We encoded our current board as a Dict indexed by position tuples for fast access, and the values contain the position at each node. We tried to exploit symmetry as much as possible; our move functions are able to handle vertical, horizontal, and diagonal lines the same way using helper functions “isCollinear” and “moveOneStep”.
+
+Most of our helper functions for board manipulation are contained in Helper.elm and most of our Constants and coordinate conversion happens in Constants.elm. Yinsh.elm contains all the state handling, rendering, and game logic.
+
+Our GUI is made with elm-collage, which was surprisingly easy to use. We divided up rendering elements between rendering “static” elements which do not change from user interaction within a state from “floating”/dynamic elements like selection highlighters that do change when the mouse is moved or clicked within the same state. We spent a lot of time tweaking the UI and making sure it’s elegant and intuitive, per the principles of Elm.
+
+For checking valid moves and flipping markers after a valid ring move, we used recursion instead of iteration, since the board structure lends itself nicely to recursion. 
+
+We got a bit lazy when checking valid rows. Instead of using a more algorithmically efficient approach with recursion and mapping, we decided to just check all possible 5-rows on the whole board since this check happens rarely. The code still runs extremely fast (it’s a board game after all), so we did not bother to optimize it.
+
+Handling the special cases of more than 5 markers in a row was harder than expected. We noticed some glitches in edge cases with 6, 7 in a row (or scoring for the opponent by flipping their markers over) and spent a while debugging the edge cases and implementing extra logic to make these edge cases work well. We decided the most intuitive way for the user to interact in these cases was to let them select the markers they wanted to remove manually and then select a ring. Most of the code looks relatively clean except for the “update” function; that’s because the “update” function is a near verbatim translation of the Yinsh rulebook.
+
+Elm’s type checking and functional aspect definitely helped us a lot in implementing the game logic. We got the core logic done much faster than expected due to the fact that we didn’t have to debug logic and stupid bugs like off-by-1 at all; most of the times, whenever our code complied, it just worked logically (like  Haskell). Debugging the edge cases was also much easier; we just saved a snapshot of our model at the edge case and initialized our model to that snapshot. Although doable in a normal language, it was much easier in Elm to do this.
+
+Of course, there were also a few downsides to Elm, which mostly stemmed from our relative inexperience with web development in general and Elm. It took us a while to fully understand how JSON decoders worked. Overall though, it seems like Elm is very nice to use for developing state-based applications like a board game.
+
+We plan to implement multiplayer support via firebase (didn’t get to that due to time constraints) where instead of the second player sending mouse commands while in P2 gamestates, we have the server send MouseClick and MouseMoved events for the other player, which would allow the first player to view the second player’s movements and moves in real time. Also, we might add different board shapes to the game; we would only have to generate new coordinates for the points and lines and change the formatting of some of the graphical elements slightly; the core game logic works with an arbitrary board size.

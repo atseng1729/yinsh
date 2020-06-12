@@ -5501,8 +5501,8 @@ var $author$project$Helper$flipPointsBetween = F3(
 				return _Debug_todo(
 					'Helper',
 					{
-						start: {line: 75, column: 5},
-						end: {line: 75, column: 15}
+						start: {line: 74, column: 5},
+						end: {line: 74, column: 15}
 					})('flipPointsBetween - Should not reach here');
 			} else {
 				if (_Utils_eq(curP, newRingP)) {
@@ -5549,8 +5549,8 @@ var $author$project$Helper$flipPointsBetween = F3(
 					return _Debug_todo(
 						'Helper',
 						{
-							start: {line: 93, column: 9},
-							end: {line: 93, column: 19}
+							start: {line: 92, column: 9},
+							end: {line: 92, column: 19}
 						})('flipPointsBetween - Should not reach here');
 				}
 			}
@@ -8183,8 +8183,8 @@ var $author$project$Yinsh$renderPiece = function (_v0) {
 			return _Debug_todo(
 				'Yinsh',
 				{
-					start: {line: 356, column: 17},
-					end: {line: 356, column: 27}
+					start: {line: 360, column: 17},
+					end: {line: 360, column: 27}
 				})('renderPiece - should not reach here');
 	}
 };

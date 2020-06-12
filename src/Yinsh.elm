@@ -25,6 +25,7 @@ import Helper exposing (..)
 -- PlaceR -> Placing the rings initially
 -- SelectR -> selecting ring to move
 -- Confirm -> choosing the move out of the possible ones
+-- RemoveM -> Choose markers to remove
 -- RemoveR -> remove a ring upon 5-in-row (or many if 2 5s are formed at once, have to figure out how to select row for these edge cases...)
 -- Win -> Display win message
 -- True/False to toggle which side is moving
@@ -336,7 +337,7 @@ renderScore (x, y) =
   ] |> group
 
 renderBoard : List (Point, Point) -> Collage Msg
-renderBoard edges_coords =
+renderBoard edges_coords =-- TODO: change name to isEmptyHex
   let edges = List.map (\(p1, p2) -> segment p1 p2
               |> traced (solid thin (uniform boardColor))) edges_coords
               |> group
