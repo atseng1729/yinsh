@@ -163,7 +163,7 @@ update msg model =
             ({model | gameState = SelectR player, selectMouseHex = model.mouseHex},
               Cmd.none)
         RemoveM player prevPlayer ->
-          if (isMarkerPlayer model.boardData pt player) && not (List.member pt model.toBeRemovedMarkers) then
+          if (List.member pt model.possibleRemoveMarkers) && not (List.member pt model.toBeRemovedMarkers) then
             let
               newRemovedMarkers = pt::model.toBeRemovedMarkers
               fiveSelected = 5 == List.length newRemovedMarkers

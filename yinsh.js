@@ -5660,16 +5660,6 @@ var $author$project$Helper$getValidMoves = F2(
 			},
 			$elm$core$Dict$keys(boardData));
 	});
-var $author$project$Helper$isMarkerPlayer = F3(
-	function (boardData, p, player) {
-		var _v0 = A2($author$project$Helper$maybeMarker, boardData, p);
-		if ((_v0.$ === 'Just') && (_v0.a.$ === 'Marker')) {
-			var mplayer = _v0.a.a;
-			return _Utils_eq(player, mplayer);
-		} else {
-			return false;
-		}
-	});
 var $author$project$Helper$isPlayerRing = F3(
 	function (boardData, p, player) {
 		var _v0 = A2($author$project$Helper$maybeRing, boardData, p);
@@ -6985,7 +6975,7 @@ var $author$project$Yinsh$update = F2(
 				case 'RemoveM':
 					var player = _v1.a;
 					var prevPlayer = _v1.b;
-					if (A3($author$project$Helper$isMarkerPlayer, model.boardData, pt, player) && (!A2($elm$core$List$member, pt, model.toBeRemovedMarkers))) {
+					if (A2($elm$core$List$member, pt, model.possibleRemoveMarkers) && (!A2($elm$core$List$member, pt, model.toBeRemovedMarkers))) {
 						var newRemovedMarkers = A2($elm$core$List$cons, pt, model.toBeRemovedMarkers);
 						var fiveSelected = 5 === $elm$core$List$length(newRemovedMarkers);
 						return (!fiveSelected) ? _Utils_Tuple2(
