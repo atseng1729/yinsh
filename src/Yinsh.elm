@@ -336,13 +336,14 @@ renderScore (x, y) =
   , scoreRing P2 3 (y >= 3)
   ] |> group
 
-renderBoard : List (Point, Point) -> Collage Msg
-renderBoard edges_coords =-- TODO: change name to isEmptyHex
+renderBoard : Player -> List (Point, Point) -> Collage Msg
+renderBoard p edges_coords =-- TODO: change name to isEmptyHex
   let edges = List.map (\(p1, p2) -> segment p1 p2
               |> traced (solid thin (uniform boardColor))) edges_coords
               |> group
       -- Need a border b/c of the glitch near the edges. Also looks better
-      border = square (10 * side) |> outlined (solid thin (uniform borderColor))
+      playerTurnColor = if p == P1 then p1Color else p2Color
+      border = square (10 * side) |> outlined (solid thin (uniform playerTurnColor))
   in
   group [border, edges]
 
@@ -425,11 +426,11 @@ view : Model -> Html Msg
 view model =
   let
     -- Add invisible border to prevent annoying edge glitch
-    board = renderBoard edges_coords
+    board = renderBoard (getPlayer model.gameState) edges_coords
     score = renderScore model.score
     pieces = renderPieces model.boardData
-    turnRing = drawTurnRing model.gameState
-    game = addFloatingElems model <| group [pieces, score, board, turnRing] -- order important since we want pieces on top of board
+    -- turnRing = drawTurnRing model.gameState
+    game = addFloatingElems model <| group [pieces, score, board] -- order important since we want pieces on top of board
 
     styles =
       [ ("position", "fixed")

@@ -7375,48 +7375,6 @@ var $author$project$Yinsh$decodeMouse = function (isClick) {
 	return A2($elm$json$Json$Decode$map, msg_type, p);
 };
 var $elm$html$Html$div = _VirtualDom_node('div');
-var $author$project$Yinsh$getPlayer = function (state) {
-	switch (state.$) {
-		case 'PlaceR':
-			var p = state.a;
-			return p;
-		case 'SelectR':
-			var p = state.a;
-			return p;
-		case 'Confirm':
-			var p = state.a;
-			return p;
-		case 'RemoveM':
-			var p1 = state.a;
-			var p2 = state.b;
-			return p1;
-		case 'RemoveR':
-			var p1 = state.a;
-			var p2 = state.b;
-			var n = state.c;
-			return p1;
-		default:
-			var p = state.a;
-			return p;
-	}
-};
-var $author$project$Yinsh$drawTurnRing = function (g) {
-	var color = function () {
-		var _v0 = $author$project$Yinsh$getPlayer(g);
-		if (_v0.$ === 'P1') {
-			return $author$project$Constants$p1Color;
-		} else {
-			return $author$project$Constants$p2Color;
-		}
-	}();
-	return A2(
-		$timjs$elm_collage$Collage$outlined,
-		A2(
-			$timjs$elm_collage$Collage$solid,
-			$timjs$elm_collage$Collage$thin,
-			$timjs$elm_collage$Collage$uniform(color)),
-		$timjs$elm_collage$Collage$circle(4.6 * $author$project$Constants$side));
-};
 var $author$project$Constants$edges = _List_fromArray(
 	[
 		_Utils_Tuple2(
@@ -8096,6 +8054,31 @@ var $author$project$Constants$edges_coords = A2(
 			$author$project$Constants$hex2pix(p2));
 	},
 	$author$project$Constants$edges);
+var $author$project$Yinsh$getPlayer = function (state) {
+	switch (state.$) {
+		case 'PlaceR':
+			var p = state.a;
+			return p;
+		case 'SelectR':
+			var p = state.a;
+			return p;
+		case 'Confirm':
+			var p = state.a;
+			return p;
+		case 'RemoveM':
+			var p1 = state.a;
+			var p2 = state.b;
+			return p1;
+		case 'RemoveR':
+			var p1 = state.a;
+			var p2 = state.b;
+			var n = state.c;
+			return p1;
+		default:
+			var p = state.a;
+			return p;
+	}
+};
 var $elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 'Normal', a: a};
 };
@@ -8109,7 +8092,6 @@ var $elm$html$Html$Events$on = F2(
 	});
 var $avh4$elm_color$Color$darkGrey = A4($avh4$elm_color$Color$RgbaSpace, 186 / 255, 189 / 255, 182 / 255, 1.0);
 var $author$project$Constants$boardColor = $avh4$elm_color$Color$darkGrey;
-var $author$project$Constants$borderColor = $avh4$elm_color$Color$black;
 var $timjs$elm_collage$Collage$Core$Polyline = function (a) {
 	return {$: 'Polyline', a: a};
 };
@@ -8141,33 +8123,35 @@ var $timjs$elm_collage$Collage$traced = F2(
 		return $timjs$elm_collage$Collage$Core$collage(
 			A2($timjs$elm_collage$Collage$Core$Path, linestyle, p));
 	});
-var $author$project$Yinsh$renderBoard = function (edges_coords) {
-	var edges = $timjs$elm_collage$Collage$group(
-		A2(
-			$elm$core$List$map,
-			function (_v0) {
-				var p1 = _v0.a;
-				var p2 = _v0.b;
-				return A2(
-					$timjs$elm_collage$Collage$traced,
-					A2(
-						$timjs$elm_collage$Collage$solid,
-						$timjs$elm_collage$Collage$thin,
-						$timjs$elm_collage$Collage$uniform($author$project$Constants$boardColor)),
-					A2($timjs$elm_collage$Collage$segment, p1, p2));
-			},
-			edges_coords));
-	var border = A2(
-		$timjs$elm_collage$Collage$outlined,
-		A2(
-			$timjs$elm_collage$Collage$solid,
-			$timjs$elm_collage$Collage$thin,
-			$timjs$elm_collage$Collage$uniform($author$project$Constants$borderColor)),
-		$timjs$elm_collage$Collage$square(10 * $author$project$Constants$side));
-	return $timjs$elm_collage$Collage$group(
-		_List_fromArray(
-			[border, edges]));
-};
+var $author$project$Yinsh$renderBoard = F2(
+	function (p, edges_coords) {
+		var playerTurnColor = _Utils_eq(p, $author$project$Constants$P1) ? $author$project$Constants$p1Color : $author$project$Constants$p2Color;
+		var edges = $timjs$elm_collage$Collage$group(
+			A2(
+				$elm$core$List$map,
+				function (_v0) {
+					var p1 = _v0.a;
+					var p2 = _v0.b;
+					return A2(
+						$timjs$elm_collage$Collage$traced,
+						A2(
+							$timjs$elm_collage$Collage$solid,
+							$timjs$elm_collage$Collage$thin,
+							$timjs$elm_collage$Collage$uniform($author$project$Constants$boardColor)),
+						A2($timjs$elm_collage$Collage$segment, p1, p2));
+				},
+				edges_coords));
+		var border = A2(
+			$timjs$elm_collage$Collage$outlined,
+			A2(
+				$timjs$elm_collage$Collage$solid,
+				$timjs$elm_collage$Collage$thin,
+				$timjs$elm_collage$Collage$uniform(playerTurnColor)),
+			$timjs$elm_collage$Collage$square(10 * $author$project$Constants$side));
+		return $timjs$elm_collage$Collage$group(
+			_List_fromArray(
+				[border, edges]));
+	});
 var $elm$core$Basics$neq = _Utils_notEqual;
 var $author$project$Yinsh$renderPiece = function (_v0) {
 	var p = _v0.a;
@@ -8183,8 +8167,8 @@ var $author$project$Yinsh$renderPiece = function (_v0) {
 			return _Debug_todo(
 				'Yinsh',
 				{
-					start: {line: 360, column: 17},
-					end: {line: 360, column: 27}
+					start: {line: 361, column: 17},
+					end: {line: 361, column: 27}
 				})('renderPiece - should not reach here');
 	}
 };
@@ -9113,7 +9097,6 @@ var $timjs$elm_collage$Collage$Render$svg = function (collage) {
 		A2($timjs$elm_collage$Collage$Layout$align, $timjs$elm_collage$Collage$Layout$topLeft, collage));
 };
 var $author$project$Yinsh$view = function (model) {
-	var turnRing = $author$project$Yinsh$drawTurnRing(model.gameState);
 	var styles = _List_fromArray(
 		[
 			_Utils_Tuple2('position', 'fixed'),
@@ -9134,13 +9117,16 @@ var $author$project$Yinsh$view = function (model) {
 			'mousedown',
 			$author$project$Yinsh$decodeMouse(true))
 		]);
-	var board = $author$project$Yinsh$renderBoard($author$project$Constants$edges_coords);
+	var board = A2(
+		$author$project$Yinsh$renderBoard,
+		$author$project$Yinsh$getPlayer(model.gameState),
+		$author$project$Constants$edges_coords);
 	var game = A2(
 		$author$project$Yinsh$addFloatingElems,
 		model,
 		$timjs$elm_collage$Collage$group(
 			_List_fromArray(
-				[pieces, score, board, turnRing])));
+				[pieces, score, board])));
 	var attr_styles = A2(
 		$elm$core$List$map,
 		function (_v1) {
